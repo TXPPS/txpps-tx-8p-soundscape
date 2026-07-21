@@ -170,7 +170,7 @@ export function PerformanceDeck() {
 
       {/* Octave utility column */}
       <div
-        className="flex shrink-0 flex-col justify-between gap-1"
+        className="flex shrink-0 flex-col gap-1.5"
         style={{ width: 64 }}
       >
         <ProgramButton
