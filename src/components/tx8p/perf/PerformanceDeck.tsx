@@ -25,31 +25,17 @@ import { useViewportClass } from "@/hooks/use-portrait";
  *      surrounding page layout).
  */
 export function PerformanceDeck() {
-  const {
-    pitch,
-    mod,
-    hold,
-    octave,
-    setPitch,
-    setMod,
-    toggleHold,
-    stepOctave,
-  } = usePerfStore();
+  const { pitch, mod, hold, octave, setPitch, setMod, toggleHold, stepOctave } = usePerfStore();
   const flashLcd = useUiStore((s) => s.flashLcd);
   const cls = useViewportClass();
 
   const flashOctave = (next: number) =>
-    flashLcd(
-      { kind: "message", line1: "OCTAVE", line2: `${next >= 0 ? "+" : ""}${next}` },
-      700,
-    );
+    flashLcd({ kind: "message", line1: "OCTAVE", line2: `${next >= 0 ? "+" : ""}${next}` }, 700);
 
   const bedStyle: React.CSSProperties = {
-    background:
-      "linear-gradient(180deg, oklch(0.20 0.004 60) 0%, oklch(0.14 0.004 60) 100%)",
+    background: "linear-gradient(180deg, oklch(0.20 0.004 60) 0%, oklch(0.14 0.004 60) 100%)",
     borderTop: "1px solid oklch(0 0 0 / 0.55)",
-    boxShadow:
-      "inset 0 6px 10px -6px oklch(0 0 0 / 0.65), inset 0 -1px 0 var(--chassis-edge-dark)",
+    boxShadow: "inset 0 6px 10px -6px oklch(0 0 0 / 0.65), inset 0 -1px 0 var(--chassis-edge-dark)",
   };
 
   const octDisplay = (compact = false) => (
@@ -92,12 +78,7 @@ export function PerformanceDeck() {
             onRelease={() => setPitch(0)}
             bipolar
           />
-          <PerfMiniStrip
-            label="MOD"
-            value={mod}
-            onChange={setMod}
-            accent="var(--lcd-amber)"
-          />
+          <PerfMiniStrip label="MOD" value={mod} onChange={setMod} accent="var(--lcd-amber)" />
           <ProgramButton
             color="cream"
             onClick={() => {
@@ -119,12 +100,7 @@ export function PerformanceDeck() {
           >
             +
           </ProgramButton>
-          <ProgramButton
-            color="amber"
-            active={hold}
-            onClick={toggleHold}
-            ariaLabel="Hold"
-          >
+          <ProgramButton color="amber" active={hold} onClick={toggleHold} ariaLabel="Hold">
             HOLD
           </ProgramButton>
         </div>
@@ -162,12 +138,7 @@ export function PerformanceDeck() {
               />
             </RecessedTrack>
             <RecessedTrack label="MOD">
-              <PitchModStrip
-                label="Mod"
-                value={mod}
-                onChange={setMod}
-                accent="var(--lcd-amber)"
-              />
+              <PitchModStrip label="Mod" value={mod} onChange={setMod} accent="var(--lcd-amber)" />
             </RecessedTrack>
           </div>
           <div className="flex items-center gap-1">
@@ -193,12 +164,7 @@ export function PerformanceDeck() {
               +
             </ProgramButton>
           </div>
-          <ProgramButton
-            color="amber"
-            active={hold}
-            onClick={toggleHold}
-            ariaLabel="Hold"
-          >
+          <ProgramButton color="amber" active={hold} onClick={toggleHold} ariaLabel="Hold">
             HOLD
           </ProgramButton>
         </div>
@@ -234,12 +200,7 @@ export function PerformanceDeck() {
           />
         </RecessedTrack>
         <RecessedTrack label="MOD">
-          <PitchModStrip
-            label="Mod"
-            value={mod}
-            onChange={setMod}
-            accent="var(--lcd-amber)"
-          />
+          <PitchModStrip label="Mod" value={mod} onChange={setMod} accent="var(--lcd-amber)" />
         </RecessedTrack>
       </div>
 
@@ -266,12 +227,7 @@ export function PerformanceDeck() {
           OCT −
         </ProgramButton>
         {octDisplay()}
-        <ProgramButton
-          color="amber"
-          active={hold}
-          onClick={toggleHold}
-          ariaLabel="Hold"
-        >
+        <ProgramButton color="amber" active={hold} onClick={toggleHold} ariaLabel="Hold">
           HOLD
         </ProgramButton>
       </div>
@@ -306,10 +262,7 @@ function PerfMiniStrip({
   accent?: string;
 }) {
   return (
-    <div
-      className="relative flex shrink-0 flex-col items-stretch"
-      style={{ width: 40 }}
-    >
+    <div className="relative flex shrink-0 flex-col items-stretch" style={{ width: 40 }}>
       <span
         className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 font-sans font-semibold"
         style={{
@@ -340,13 +293,7 @@ function PerfMiniStrip({
  * header label. Fixes the earlier "shared track" look where the two
  * strips visually merged.
  */
-function RecessedTrack({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function RecessedTrack({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-1 min-w-0 flex-col items-stretch gap-1">
       <span
@@ -362,10 +309,8 @@ function RecessedTrack({
       <div
         className="flex flex-1 items-stretch justify-center rounded-[3px] px-1 py-1"
         style={{
-          background:
-            "linear-gradient(180deg, oklch(0.10 0.004 60) 0%, oklch(0.16 0.004 60) 100%)",
-          boxShadow:
-            "inset 0 0 0 1px oklch(0 0 0 / 0.55), inset 0 2px 3px oklch(0 0 0 / 0.5)",
+          background: "linear-gradient(180deg, oklch(0.10 0.004 60) 0%, oklch(0.16 0.004 60) 100%)",
+          boxShadow: "inset 0 0 0 1px oklch(0 0 0 / 0.55), inset 0 2px 3px oklch(0 0 0 / 0.5)",
         }}
       >
         {children}

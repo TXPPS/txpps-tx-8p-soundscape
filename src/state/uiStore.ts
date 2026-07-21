@@ -1,13 +1,6 @@
 import { create } from "zustand";
 
-export type TabId =
-  | "OSC"
-  | "FILTER"
-  | "ENV"
-  | "LFO"
-  | "MOD"
-  | "FX"
-  | "VOICE";
+export type TabId = "OSC" | "FILTER" | "ENV" | "LFO" | "MOD" | "FX" | "VOICE";
 
 export type PanelId = "osc" | "filter" | "env" | "lfo" | "mod" | "fx";
 
@@ -52,8 +45,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   lcdReleaseTimer: null,
 
   setActiveTab: (t) => set({ activeTab: t }),
-  setSubTab: (t, sub) =>
-    set((s) => ({ activeSubTab: { ...s.activeSubTab, [t]: sub } })),
+  setSubTab: (t, sub) => set((s) => ({ activeSubTab: { ...s.activeSubTab, [t]: sub } })),
   setBrowserOpen: (v) => set({ browserOpen: v }),
   setSettingsOpen: (v) => set({ settingsOpen: v }),
   setLcdMode: (m) => {

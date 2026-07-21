@@ -26,9 +26,7 @@ export function SubTabs({ tab, options }: { tab: TabId; options: string[] }) {
               background: isActive
                 ? "linear-gradient(180deg, var(--btn-cream-top), var(--btn-cream-bottom))"
                 : "linear-gradient(180deg, oklch(0.22 0.005 60), oklch(0.16 0.005 60))",
-              color: isActive
-                ? "var(--btn-cream-text)"
-                : "var(--engraving-fill)",
+              color: isActive ? "var(--btn-cream-text)" : "var(--engraving-fill)",
               boxShadow: isActive
                 ? "var(--shadow-cream-btn)"
                 : "inset 0 0 0 1px oklch(0 0 0 / 0.55), inset 0 1px 2px oklch(0 0 0 / 0.55)",

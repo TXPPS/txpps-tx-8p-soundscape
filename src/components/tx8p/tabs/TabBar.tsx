@@ -56,10 +56,7 @@ export function TabBar() {
               aria-selected={isActive}
               onClick={() => {
                 setTab(t.id);
-                flash(
-                  { kind: "message", line1: "SECTION", line2: t.long },
-                  600,
-                );
+                flash({ kind: "message", line1: "SECTION", line2: t.long }, 600);
               }}
               className="tab-btn group relative flex shrink-0 flex-col items-center justify-center whitespace-nowrap md:flex-1"
               style={{
@@ -70,9 +67,7 @@ export function TabBar() {
                 background: isActive
                   ? "linear-gradient(180deg, var(--panel-strip-top) 0%, var(--panel-strip) 100%)"
                   : "linear-gradient(180deg, var(--chassis-highlight) 0%, var(--chassis-base) 100%)",
-                color: isActive
-                  ? "var(--engraving-fill)"
-                  : "var(--engraving-chassis)",
+                color: isActive ? "var(--engraving-fill)" : "var(--engraving-chassis)",
                 boxShadow: isActive
                   ? "inset 0 2px 4px oklch(0 0 0 / 0.55), inset 0 0 0 1px oklch(0 0 0 / 0.5)"
                   : "0 1px 0 oklch(1 0 0 / 0.25) inset, 0 -1px 0 var(--chassis-edge-dark) inset, 0 1px 1px oklch(0 0 0 / 0.25)",

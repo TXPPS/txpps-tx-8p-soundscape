@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getSynthEngine, type VoiceHandle } from "@/engine/SynthEngine";
 
 const OCTAVE_PATTERN = [
   { note: "C", black: false },
@@ -45,9 +46,19 @@ function buildKeys(startOctave: number, octaveCount: number): Key[] {
 }
 
 /**
- * Bare keyboard: fills its container (no outer chassis frame — the
- * performance deck provides the shared bed). Warm ivory whites, deep
- * charcoal blacks, tall musical proportions.
+ * On-screen keyboard.
+ *
+ * Ownership model — one entry per active pointer, keyed by
+ * `pointerId`. Each entry stores the `VoiceHandle` returned by the
+ * engine on press so the release is guaranteed to reach the exact
+ * voice that was triggered, even for repeated identical notes or
+ * overlapping touches.
+ *
+ * Cleanup surfaces:
+ *  - pointerup / pointercancel / pointerleave  → release that pointer
+ *  - `lostpointercapture`                       → release that pointer
+ *  - window `blur` / `visibilitychange` (hidden)→ release everything
+ *  - engine `panic()` (via top bar) will also clear anything we miss
  */
 export function Keyboard({
   startOctave = 3,
@@ -60,8 +71,13 @@ export function Keyboard({
   const whites = keys.filter((k) => !k.black);
   const [held, setHeld] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const ownership = useRef<Map<number, { midi: number; handle: VoiceHandle }>>(new Map());
 
-  const press = useCallback((midi: number) => {
+  const press = useCallback((pointerId: number, midi: number) => {
+    // Guard against duplicate presses from the same pointer.
+    if (ownership.current.has(pointerId)) return;
+    const handle = getSynthEngine().pressNote("screen", `p${pointerId}`, midi, 0.9);
+    ownership.current.set(pointerId, { midi, handle });
     setHeld((prev) => {
       if (prev.has(midi)) return prev;
       const next = new Set(prev);
@@ -69,14 +85,44 @@ export function Keyboard({
       return next;
     });
   }, []);
-  const release = useCallback((midi: number) => {
-    setHeld((prev) => {
-      if (!prev.has(midi)) return prev;
-      const next = new Set(prev);
-      next.delete(midi);
-      return next;
-    });
+
+  const release = useCallback((pointerId: number) => {
+    const entry = ownership.current.get(pointerId);
+    if (!entry) return;
+    ownership.current.delete(pointerId);
+    getSynthEngine().releaseNote(entry.handle);
+    // Only clear visual held state if no other pointer is still holding
+    // the same MIDI note (multitouch on repeated notes).
+    const stillHeld = Array.from(ownership.current.values()).some((e) => e.midi === entry.midi);
+    if (!stillHeld) {
+      setHeld((prev) => {
+        if (!prev.has(entry.midi)) return prev;
+        const next = new Set(prev);
+        next.delete(entry.midi);
+        return next;
+      });
+    }
   }, []);
+
+  const releaseAll = useCallback(() => {
+    for (const [id] of Array.from(ownership.current.entries())) {
+      release(id);
+    }
+  }, [release]);
+
+  useEffect(() => {
+    const onBlur = () => releaseAll();
+    const onVis = () => {
+      if (document.hidden) releaseAll();
+    };
+    window.addEventListener("blur", onBlur);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      document.removeEventListener("visibilitychange", onVis);
+      releaseAll();
+    };
+  }, [releaseAll]);
 
   const whiteCount = whites.length;
   return (
@@ -100,11 +146,12 @@ export function Keyboard({
               aria-pressed={active}
               onPointerDown={(e) => {
                 (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                press(k.midi);
+                press(e.pointerId, k.midi);
               }}
-              onPointerUp={() => release(k.midi)}
-              onPointerLeave={() => release(k.midi)}
-              onPointerCancel={() => release(k.midi)}
+              onPointerUp={(e) => release(e.pointerId)}
+              onPointerLeave={(e) => release(e.pointerId)}
+              onPointerCancel={(e) => release(e.pointerId)}
+              onLostPointerCapture={(e) => release(e.pointerId)}
               className="relative flex-1"
               style={{
                 background: active
@@ -152,11 +199,12 @@ export function Keyboard({
                 aria-pressed={active}
                 onPointerDown={(e) => {
                   (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                  press(k.midi);
+                  press(e.pointerId, k.midi);
                 }}
-                onPointerUp={() => release(k.midi)}
-                onPointerLeave={() => release(k.midi)}
-                onPointerCancel={() => release(k.midi)}
+                onPointerUp={(e) => release(e.pointerId)}
+                onPointerLeave={(e) => release(e.pointerId)}
+                onPointerCancel={(e) => release(e.pointerId)}
+                onLostPointerCapture={(e) => release(e.pointerId)}
                 className="pointer-events-auto absolute"
                 style={{
                   left: `${leftPct}%`,

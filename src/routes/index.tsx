@@ -105,8 +105,7 @@ function Index() {
         aria-hidden
         className="h-[2px] w-full"
         style={{
-          background:
-            "linear-gradient(180deg, oklch(0 0 0 / 0.35), oklch(1 0 0 / 0.15))",
+          background: "linear-gradient(180deg, oklch(0 0 0 / 0.35), oklch(1 0 0 / 0.15))",
         }}
       />
 
@@ -117,12 +116,8 @@ function Index() {
       <div className="flex flex-col gap-2 px-3 py-3 md:px-6 md:py-3">
         <Editor />
         <div className="flex items-center justify-between px-1">
-          <EngravedLabel variant="chassis-dim">
-            TXPPS · TX-8P · Hybrid Poly Synth
-          </EngravedLabel>
-          <EngravedLabel variant="chassis-dim">
-            Made in Software · 8P
-          </EngravedLabel>
+          <EngravedLabel variant="chassis-dim">TXPPS · TX-8P · Hybrid Poly Synth</EngravedLabel>
+          <EngravedLabel variant="chassis-dim">Made in Software · 8P</EngravedLabel>
         </div>
       </div>
 

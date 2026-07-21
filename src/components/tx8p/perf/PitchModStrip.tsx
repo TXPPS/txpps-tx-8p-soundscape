@@ -41,9 +41,7 @@ export function PitchModStrip({
       const el = ref.current;
       if (!el) return value;
       const r = el.getBoundingClientRect();
-      const pct = horizontal
-        ? (clientX - r.left) / r.width
-        : 1 - (clientY - r.top) / r.height;
+      const pct = horizontal ? (clientX - r.left) / r.width : 1 - (clientY - r.top) / r.height;
       const c = Math.max(0, Math.min(1, pct));
       return min + c * (max - min);
     },
@@ -92,9 +90,7 @@ export function PitchModStrip({
         onChangeRef.current(compute(e.clientX, e.clientY));
       }}
       onLostPointerCapture={(e) => end(e.pointerId)}
-      className={`relative select-none touch-none ${
-        horizontal ? "w-full" : "h-full"
-      }`}
+      className={`relative select-none touch-none ${horizontal ? "w-full" : "h-full"}`}
       style={{
         // visible track is narrow; full box gives a comfortable hit target.
         width: horizontal ? undefined : 22,
@@ -102,10 +98,8 @@ export function PitchModStrip({
         height: horizontal ? 22 : undefined,
         minHeight: horizontal ? 44 : undefined,
         borderRadius: 3,
-        background:
-          "linear-gradient(180deg, oklch(0.14 0.004 60) 0%, oklch(0.22 0.004 60) 100%)",
-        boxShadow:
-          "inset 0 0 0 1px oklch(0 0 0 / 0.6), inset 0 2px 4px oklch(0 0 0 / 0.55)",
+        background: "linear-gradient(180deg, oklch(0.14 0.004 60) 0%, oklch(0.22 0.004 60) 100%)",
+        boxShadow: "inset 0 0 0 1px oklch(0 0 0 / 0.6), inset 0 2px 4px oklch(0 0 0 / 0.55)",
       }}
     >
       {/* center reference for bipolar */}

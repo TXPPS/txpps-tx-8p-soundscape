@@ -3,9 +3,7 @@ import { type ReactNode } from "react";
 export function Chassis({ children }: { children: ReactNode }) {
   return (
     <div className="chassis-surface min-h-screen w-full">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1500px] flex-col">
-        {children}
-      </div>
+      <div className="mx-auto flex min-h-screen w-full max-w-[1500px] flex-col">{children}</div>
     </div>
   );
 }
