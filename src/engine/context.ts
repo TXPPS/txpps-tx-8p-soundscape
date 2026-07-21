@@ -28,8 +28,7 @@ export function getAudioGraph(): AudioGraph {
   }
   const Ctor: typeof AudioContext =
     window.AudioContext ??
-    (window as unknown as { webkitAudioContext: typeof AudioContext })
-      .webkitAudioContext;
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) throw new Error("Web Audio API not supported in this browser");
 
   const ctx = new Ctor({ latencyHint: "interactive" });

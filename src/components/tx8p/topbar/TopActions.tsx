@@ -40,9 +40,7 @@ function HardwareIconButton({
         boxShadow: isDanger
           ? "0 1px 0 oklch(1 0 0 / 0.25) inset, 0 -1px 0 oklch(0 0 0 / 0.35) inset, 0 1px 2px oklch(0 0 0 / 0.55)"
           : "var(--shadow-cream-btn)",
-        border: isDanger
-          ? "1px solid oklch(0.32 0.10 22)"
-          : "1px solid oklch(0 0 0 / 0.35)",
+        border: isDanger ? "1px solid oklch(0.32 0.10 22)" : "1px solid oklch(0 0 0 / 0.35)",
       }}
     >
       {children}
@@ -90,10 +88,8 @@ function EngineStatusPill() {
         fontSize: 9,
         letterSpacing: "0.16em",
         color: "var(--engraving-chassis)",
-        background:
-          "linear-gradient(180deg, oklch(0.30 0.004 60) 0%, oklch(0.22 0.004 60) 100%)",
-        boxShadow:
-          "inset 0 0 0 1px oklch(0 0 0 / 0.55), inset 0 1px 2px oklch(0 0 0 / 0.45)",
+        background: "linear-gradient(180deg, oklch(0.30 0.004 60) 0%, oklch(0.22 0.004 60) 100%)",
+        boxShadow: "inset 0 0 0 1px oklch(0 0 0 / 0.55), inset 0 1px 2px oklch(0 0 0 / 0.45)",
         cursor: clickable ? "pointer" : "default",
       }}
     >
@@ -118,11 +114,7 @@ export function TopActions() {
   return (
     <div className="flex items-center gap-1.5">
       <EngineStatusPill />
-      <HardwareIconButton
-        onClick={() => openSettings(true)}
-        ariaLabel="Settings"
-        title="Settings"
-      >
+      <HardwareIconButton onClick={() => openSettings(true)} ariaLabel="Settings" title="Settings">
         <Settings size={14} strokeWidth={2.25} />
       </HardwareIconButton>
       <HardwareIconButton

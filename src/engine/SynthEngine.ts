@@ -110,9 +110,7 @@ class SynthEngineImpl {
       try {
         if (!this.graph) {
           this.graph = getAudioGraph();
-          this.graph.ctx.addEventListener("statechange", () =>
-            this.reflectContextState(),
-          );
+          this.graph.ctx.addEventListener("statechange", () => this.reflectContextState());
         }
         if (this.graph.ctx.state !== "running") {
           await this.graph.ctx.resume();
@@ -165,12 +163,7 @@ class SynthEngineImpl {
    * running, unless the caller has already called `releaseNote()` on
    * this handle in the meantime.
    */
-  pressNote(
-    source: NoteSource,
-    sourceKey: string,
-    midi: number,
-    velocity = 0.8,
-  ): VoiceHandle {
+  pressNote(source: NoteSource, sourceKey: string, midi: number, velocity = 0.8): VoiceHandle {
     const handle = this.nextHandle++;
 
     if (this.status === "ready" && this.graph) {
@@ -196,13 +189,7 @@ class SynthEngineImpl {
         this.pending.delete(handle);
         if (req.cancelled) return;
         if (this.status !== "ready" || !this.graph) return;
-        this.triggerVoice(
-          handle,
-          req.midi,
-          req.velocity,
-          req.source,
-          req.sourceKey,
-        );
+        this.triggerVoice(handle, req.midi, req.velocity, req.source, req.sourceKey);
       })
       .catch(() => {
         // Startup error already surfaced via setStatus("error").
@@ -324,8 +311,7 @@ class SynthEngineImpl {
     v.releasing = true;
     const ctx = this.graph.ctx;
     const t = ctx.currentTime;
-    const releaseSec =
-      releaseSecOverride ?? Math.max(0.005, this.params["amp.release"] / 1000);
+    const releaseSec = releaseSecOverride ?? Math.max(0.005, this.params["amp.release"] / 1000);
     try {
       v.amp.gain.cancelScheduledValues(t);
       v.amp.gain.setValueAtTime(v.amp.gain.value, t);
@@ -334,10 +320,7 @@ class SynthEngineImpl {
     } catch {
       /* already stopped */
     }
-    v.cleanupTimer = setTimeout(
-      () => this.disposeVoice(v),
-      releaseSec * 1000 + 40,
-    );
+    v.cleanupTimer = setTimeout(() => this.disposeVoice(v), releaseSec * 1000 + 40);
   }
 
   private disposeVoice(v: Voice) {

@@ -71,9 +71,7 @@ export function Keyboard({
   const whites = keys.filter((k) => !k.black);
   const [held, setHeld] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
-  const ownership = useRef<Map<number, { midi: number; handle: VoiceHandle }>>(
-    new Map(),
-  );
+  const ownership = useRef<Map<number, { midi: number; handle: VoiceHandle }>>(new Map());
 
   const press = useCallback((pointerId: number, midi: number) => {
     // Guard against duplicate presses from the same pointer.
@@ -95,9 +93,7 @@ export function Keyboard({
     getSynthEngine().releaseNote(entry.handle);
     // Only clear visual held state if no other pointer is still holding
     // the same MIDI note (multitouch on repeated notes).
-    const stillHeld = Array.from(ownership.current.values()).some(
-      (e) => e.midi === entry.midi,
-    );
+    const stillHeld = Array.from(ownership.current.values()).some((e) => e.midi === entry.midi);
     if (!stillHeld) {
       setHeld((prev) => {
         if (!prev.has(entry.midi)) return prev;
