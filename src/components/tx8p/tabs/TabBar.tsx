@@ -9,7 +9,7 @@ interface TabDef {
 
 export const TABS: TabDef[] = [
   { id: "OSC", short: "OSC", long: "OSCILLATORS", accent: "red" },
-  { id: "FILTER", short: "FILTER", long: "FILTER", accent: "cream" },
+  { id: "FILTER", short: "FILT", long: "FILTER", accent: "cream" },
   { id: "ENV", short: "ENV", long: "ENVELOPES", accent: "cream" },
   { id: "LFO", short: "LFO", long: "LFO", accent: "amber" },
   { id: "MOD", short: "MOD", long: "MOD MATRIX", accent: "amber" },
@@ -24,6 +24,12 @@ const ACCENT_COLOR: Record<TabDef["accent"], string> = {
   blue: "var(--btn-blue)",
 };
 
+/**
+ * Primary section tabs. On phone-class widths, the row is a true
+ * horizontally scrollable hardware-style strip so every tab — including
+ * the trailing VOICE tab — is reachable at 390px viewports. On
+ * tablet/desktop, tabs share the row equally.
+ */
 export function TabBar() {
   const active = useUiStore((s) => s.activeTab);
   const setTab = useUiStore((s) => s.setActiveTab);
@@ -34,8 +40,12 @@ export function TabBar() {
       role="tablist"
       aria-label="Synthesis section"
       className="tab-bar flex w-full items-stretch overflow-x-auto px-2 py-2 md:px-4"
+      style={{
+        scrollbarWidth: "none",
+        WebkitOverflowScrolling: "touch",
+      }}
     >
-      <div className="mx-auto flex min-w-full items-stretch gap-1 md:gap-1.5">
+      <div className="flex items-stretch gap-1 md:mx-auto md:min-w-full md:gap-1.5">
         {TABS.map((t) => {
           const isActive = t.id === active;
           const accent = ACCENT_COLOR[t.accent];
@@ -51,11 +61,11 @@ export function TabBar() {
                   600,
                 );
               }}
-              className="tab-btn group relative flex flex-1 shrink-0 flex-col items-center justify-center whitespace-nowrap"
+              className="tab-btn group relative flex shrink-0 flex-col items-center justify-center whitespace-nowrap md:flex-1"
               style={{
                 minHeight: 40,
-                minWidth: 64,
-                padding: "6px 12px",
+                minWidth: 56,
+                padding: "6px 10px",
                 borderRadius: "var(--radius-control)",
                 background: isActive
                   ? "linear-gradient(180deg, var(--panel-strip-top) 0%, var(--panel-strip) 100%)"
