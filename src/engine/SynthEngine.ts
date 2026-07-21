@@ -370,13 +370,10 @@ let instance: SynthEngineImpl | undefined;
 export function getSynthEngine(): SynthEngineImpl {
   if (!instance) {
     instance = new SynthEngineImpl();
-    // Expose for automated tests / diagnostics. Read-only surface.
     if (typeof window !== "undefined") {
       (window as unknown as { __tx8p?: unknown }).__tx8p = {
         engine: instance,
-        get graph() {
-          return instance!.getContext() ? { ctx: instance!.getContext() } : undefined;
-        },
+        getGraph: () => (hasAudioGraph() ? getAudioGraph() : undefined),
       };
     }
   }
