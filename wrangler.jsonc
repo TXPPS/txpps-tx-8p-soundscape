@@ -1,0 +1,27 @@
+/**
+ * TXPPS TX-8P — canonical Cloudflare Workers configuration.
+ *
+ * The production build (`vite build`) targets Cloudflare Workers via Nitro and
+ * regenerates a concrete config at `.output/server/wrangler.json` (with the
+ * hashed module chunks + Workers Static Assets binding). Deploys use that
+ * generated file with the stable name below:
+ *
+ *   wrangler deploy -c .output/server/wrangler.json --name txpps-tx-8p
+ *
+ * This root file documents the canonical settings and is the source of truth
+ * for the Worker name, compatibility date, and asset directory. Uses modern
+ * Workers Static Assets (never deprecated Workers Sites). No secrets here.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "txpps-tx-8p",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2026-07-21",
+  "compatibility_flags": ["nodejs_compat"],
+  "no_bundle": true,
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".output/public"
+  },
+  "rules": [{ "type": "ESModule", "globs": ["**/*.mjs", "**/*.js"] }]
+}

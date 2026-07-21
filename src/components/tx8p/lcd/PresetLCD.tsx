@@ -33,8 +33,7 @@ function useLines(mode: LcdMode): [string, string] {
       case "message":
         return [pad(mode.line1), pad(mode.line2)];
       case "param": {
-        const pct = Math.round(mode.value * 100);
-        return [pad(mode.label), pad(`${bar(mode.value)} ${String(pct).padStart(3, " ")}%`)];
+        return [pad(mode.label), pad(`${bar(mode.value)} ${mode.display}`)];
       }
       case "preset":
       default: {

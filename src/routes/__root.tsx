@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportError } from "../lib/error-reporting";
+import { registerPwa } from "../lib/pwa";
 
 function NotFoundComponent() {
   return (
@@ -98,7 +99,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/icons/tx8p-icon.svg", type: "image/svg+xml" },
+      { rel: "apple-touch-icon", href: "/icons/tx8p-icon.svg" },
       {
         rel: "preload",
         href: "/fonts/JetBrainsMono.woff2",
@@ -130,6 +134,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    registerPwa();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
