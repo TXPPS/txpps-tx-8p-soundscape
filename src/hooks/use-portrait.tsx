@@ -19,14 +19,10 @@ export function useViewportClass(): ViewportClass {
   const [cls, setCls] = React.useState<ViewportClass>("wide");
 
   React.useEffect(() => {
-    const portraitMQ = window.matchMedia(
-      "(max-width: 767px) and (orientation: portrait)",
-    );
+    const portraitMQ = window.matchMedia("(max-width: 767px) and (orientation: portrait)");
     // Phone landscape: short viewport in landscape orientation. We key on
     // height rather than width because a landscape phone is ~844x390.
-    const landscapeMQ = window.matchMedia(
-      "(max-height: 500px) and (orientation: landscape)",
-    );
+    const landscapeMQ = window.matchMedia("(max-height: 500px) and (orientation: landscape)");
     const update = () => {
       if (portraitMQ.matches) setCls("mobile-portrait");
       else if (landscapeMQ.matches) setCls("mobile-landscape");

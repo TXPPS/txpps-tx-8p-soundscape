@@ -70,9 +70,7 @@ export function ProgramButton({
         borderRadius: "var(--radius-control)",
         background: `linear-gradient(180deg, ${palette.top} 0%, ${palette.bot} 100%)`,
         color: palette.text,
-        boxShadow: active
-          ? "var(--shadow-cream-btn-down)"
-          : "var(--shadow-cream-btn)",
+        boxShadow: active ? "var(--shadow-cream-btn-down)" : "var(--shadow-cream-btn)",
         fontFamily: "var(--font-engraved)",
         fontSize: 9,
         fontWeight: 700,

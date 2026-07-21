@@ -135,9 +135,7 @@ export function Editor() {
         <EngravedLabel variant="strip" className="text-[10px]">
           {tab} · {sub}
         </EngravedLabel>
-        {cfg.subOrder.length > 1 && (
-          <SubTabs tab={tab} options={cfg.subOrder} />
-        )}
+        {cfg.subOrder.length > 1 && <SubTabs tab={tab} options={cfg.subOrder} />}
       </div>
 
       {/* Parameter buttons */}
@@ -159,8 +157,7 @@ export function Editor() {
         aria-hidden
         className="h-px w-full"
         style={{
-          background:
-            "linear-gradient(90deg, transparent, oklch(0 0 0 / 0.5), transparent)",
+          background: "linear-gradient(90deg, transparent, oklch(0 0 0 / 0.5), transparent)",
         }}
       />
 
@@ -189,8 +186,7 @@ export function Editor() {
             style={{
               background:
                 "linear-gradient(180deg, oklch(0.14 0.004 60) 0%, oklch(0.20 0.004 60) 100%)",
-              boxShadow:
-                "inset 0 1px 2px oklch(0 0 0 / 0.7), inset 0 0 0 1px oklch(0 0 0 / 0.6)",
+              boxShadow: "inset 0 1px 2px oklch(0 0 0 / 0.7), inset 0 0 0 1px oklch(0 0 0 / 0.6)",
               accentColor: "var(--btn-red)",
             }}
           />

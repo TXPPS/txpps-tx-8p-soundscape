@@ -34,10 +34,7 @@ function useLines(mode: LcdMode): [string, string] {
         return [pad(mode.line1), pad(mode.line2)];
       case "param": {
         const pct = Math.round(mode.value * 100);
-        return [
-          pad(mode.label),
-          pad(`${bar(mode.value)} ${String(pct).padStart(3, " ")}%`),
-        ];
+        return [pad(mode.label), pad(`${bar(mode.value)} ${String(pct).padStart(3, " ")}%`)];
       }
       case "preset":
       default: {
@@ -77,10 +74,8 @@ export function PresetLCD() {
       style={{
         borderRadius: 3,
         padding: "6px 10px",
-        background:
-          "linear-gradient(180deg, var(--lcd-bg-top) 0%, var(--lcd-bg) 100%)",
-        boxShadow:
-          "var(--shadow-lcd-inset), 0 1px 0 oklch(1 0 0 / 0.35), 0 0 10px var(--lcd-glow)",
+        background: "linear-gradient(180deg, var(--lcd-bg-top) 0%, var(--lcd-bg) 100%)",
+        boxShadow: "var(--shadow-lcd-inset), 0 1px 0 oklch(1 0 0 / 0.35), 0 0 10px var(--lcd-glow)",
         minWidth: "22ch",
       }}
       role="status"
@@ -103,8 +98,7 @@ export function PresetLCD() {
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background:
-            "linear-gradient(180deg, oklch(1 0 0 / 0.06) 0%, transparent 40%)",
+          background: "linear-gradient(180deg, oklch(1 0 0 / 0.06) 0%, transparent 40%)",
         }}
       />
       <pre
