@@ -1,5 +1,14 @@
 import { create } from "zustand";
 
+export type TabId =
+  | "OSC"
+  | "FILTER"
+  | "ENV"
+  | "LFO"
+  | "MOD"
+  | "FX"
+  | "VOICE";
+
 export type PanelId = "osc" | "filter" | "env" | "lfo" | "mod" | "fx";
 
 export type LcdMode =
@@ -11,13 +20,15 @@ export type LcdMode =
   | { kind: "loading"; label: string };
 
 interface UiState {
-  activePanel: PanelId;
+  activeTab: TabId;
+  activeSubTab: Record<TabId, string>;
   browserOpen: boolean;
   settingsOpen: boolean;
   lcdMode: LcdMode;
   lcdReleaseTimer: ReturnType<typeof setTimeout> | null;
 
-  setActivePanel: (p: PanelId) => void;
+  setActiveTab: (t: TabId) => void;
+  setSubTab: (t: TabId, sub: string) => void;
   setBrowserOpen: (v: boolean) => void;
   setSettingsOpen: (v: boolean) => void;
   setLcdMode: (m: LcdMode) => void;
@@ -25,13 +36,24 @@ interface UiState {
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
-  activePanel: "osc",
+  activeTab: "OSC",
+  activeSubTab: {
+    OSC: "OSC 1",
+    FILTER: "MAIN",
+    ENV: "AMP",
+    LFO: "LFO 1",
+    MOD: "SLOT 1",
+    FX: "DRIVE",
+    VOICE: "MODE",
+  },
   browserOpen: false,
   settingsOpen: false,
   lcdMode: { kind: "boot" },
   lcdReleaseTimer: null,
 
-  setActivePanel: (p) => set({ activePanel: p }),
+  setActiveTab: (t) => set({ activeTab: t }),
+  setSubTab: (t, sub) =>
+    set((s) => ({ activeSubTab: { ...s.activeSubTab, [t]: sub } })),
   setBrowserOpen: (v) => set({ browserOpen: v }),
   setSettingsOpen: (v) => set({ settingsOpen: v }),
   setLcdMode: (m) => {
