@@ -65,6 +65,7 @@ Classifications verified against source, not against Lovable's completion report
 | `bunfig.toml` | Lovable-branded comment + release-age excludes | Comment neutralised; kept the single build-config exclude. |
 | `package.json` | `@lovable.dev/vite-tanstack-config` (dev dep) | **Kept** — technically necessary framework build preset (TanStack Start + Nitro + Cloudflare + Tailwind). Ships **no** runtime badge/script/analytics/telemetry into the client. |
 | `vite.config.ts` | Uses the build-config preset | **Kept** (see above). |
+| `.lovable/` (`project.json`, `plan.md`) | Lovable builder project link + metadata | **Removed** — severs builder integration; verified the production build still succeeds without it. |
 
 No `lovable.dev`/`lovable.app` links, no "Edit with Lovable" control, no Lovable favicon, no Lovable badge, no `lovable-tagger`, no analytics were present in the app UI. The favicon is a generic placeholder (replaced with TXPPS icons in the PWA phase).
 
