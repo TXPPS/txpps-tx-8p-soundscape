@@ -5,140 +5,230 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design system definition.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ * TXPPS TX-8P Design System
+ * Industrial hardware aesthetic. Original design inspired by
+ * mid-1980s Japanese polyphonic synthesizers. All colors oklch.
+ * No component should ship a raw hex, text-white, or bg-black.
  */
 
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+  font-style: normal;
+}
+
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-ring-offset-background: var(--background);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  /* shadcn compatibility (restyled to chassis tokens) */
+  --color-background: var(--chassis-base);
+  --color-foreground: var(--engraving-fill);
+  --color-card: var(--panel-recess);
+  --color-card-foreground: var(--engraving-fill);
+  --color-popover: var(--panel-recess);
+  --color-popover-foreground: var(--engraving-fill);
+  --color-primary: var(--lcd-green);
+  --color-primary-foreground: var(--chassis-base);
+  --color-secondary: var(--panel-recess);
+  --color-secondary-foreground: var(--engraving-fill);
+  --color-muted: var(--panel-recess);
+  --color-muted-foreground: var(--engraving-dim);
+  --color-accent: var(--accent-amber);
+  --color-accent-foreground: var(--chassis-base);
+  --color-destructive: var(--accent-red);
+  --color-destructive-foreground: var(--chassis-base);
+  --color-border: var(--chassis-shadow);
+  --color-input: var(--panel-recess);
+  --color-ring: var(--lcd-green);
+
+  /* TX-8P chassis tokens */
+  --color-chassis-base: var(--chassis-base);
+  --color-chassis-highlight: var(--chassis-highlight);
+  --color-chassis-shadow: var(--chassis-shadow);
+  --color-panel-recess: var(--panel-recess);
+  --color-engraving-fill: var(--engraving-fill);
+  --color-engraving-dim: var(--engraving-dim);
+  --color-lcd-bg: var(--lcd-bg);
+  --color-lcd-green: var(--lcd-green);
+  --color-lcd-green-dim: var(--lcd-green-dim);
+  --color-accent-amber: var(--accent-amber);
+  --color-accent-red: var(--accent-red);
+  --color-led-green-on: var(--led-green-on);
+  --color-led-green-off: var(--led-green-off);
+  --color-led-amber-on: var(--led-amber-on);
+  --color-led-red-on: var(--led-red-on);
+  --color-knob-face: var(--knob-face);
+  --color-knob-cap: var(--knob-cap);
+  --color-knob-indicator: var(--knob-indicator);
+
+  --radius-panel: 6px;
+  --radius-control: 4px;
+  --radius-cap: 50%;
+
+  --font-sans: "IBM Plex Sans", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-engraved: "IBM Plex Sans Condensed", "Inter Tight", system-ui, sans-serif;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  /* Chassis — warm charcoal, not pure black */
+  --chassis-base: oklch(0.24 0.006 60);
+  --chassis-highlight: oklch(0.30 0.006 60);
+  --chassis-shadow: oklch(0.16 0.006 60);
+  --chassis-edge: oklch(0.36 0.005 60);
+
+  /* Recessed panel — slightly darker than chassis */
+  --panel-recess: oklch(0.19 0.005 60);
+  --panel-edge-highlight: oklch(0.32 0.005 60);
+  --panel-edge-shadow: oklch(0.12 0.005 60);
+
+  /* Engraved labels — off-white with a hint of warmth */
+  --engraving-fill: oklch(0.86 0.008 80);
+  --engraving-dim: oklch(0.60 0.008 80);
+  --engraving-highlight: oklch(0.96 0.008 80);
+
+  /* LCD — vintage green */
+  --lcd-bg: oklch(0.30 0.06 145);
+  --lcd-green: oklch(0.82 0.19 145);
+  --lcd-green-dim: oklch(0.55 0.14 145);
+  --lcd-glow: oklch(0.82 0.19 145 / 0.55);
+  --lcd-scanline: oklch(0 0 0 / 0.18);
+
+  /* Accents */
+  --accent-amber: oklch(0.78 0.16 75);
+  --accent-red: oklch(0.62 0.22 25);
+
+  /* LEDs */
+  --led-green-on: oklch(0.82 0.22 145);
+  --led-green-off: oklch(0.30 0.04 145);
+  --led-amber-on: oklch(0.80 0.18 75);
+  --led-red-on: oklch(0.65 0.24 25);
+
+  /* Knob palette */
+  --knob-face: oklch(0.22 0.005 60);
+  --knob-face-highlight: oklch(0.32 0.005 60);
+  --knob-cap: oklch(0.18 0.004 60);
+  --knob-indicator: oklch(0.90 0.010 80);
+  --knob-shadow: oklch(0.10 0.004 60);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
+
+  /* Shadows */
+  --shadow-chassis:
+    inset 0 1px 0 var(--chassis-edge),
+    inset 0 -1px 0 var(--chassis-shadow),
+    0 24px 60px -20px oklch(0 0 0 / 0.6);
+  --shadow-inset-panel:
+    inset 0 1px 0 var(--panel-edge-shadow),
+    inset 0 -1px 0 var(--panel-edge-highlight),
+    inset 0 0 0 1px oklch(0 0 0 / 0.4);
+  --shadow-cap:
+    0 1px 0 var(--knob-face-highlight),
+    0 2px 4px oklch(0 0 0 / 0.6),
+    inset 0 -1px 2px oklch(0 0 0 / 0.5);
+  --shadow-lcd-inset:
+    inset 0 2px 6px oklch(0 0 0 / 0.6),
+    inset 0 0 0 1px oklch(0 0 0 / 0.5);
+  --shadow-led-on: 0 0 6px var(--led-green-on), 0 0 12px var(--led-green-on);
+
+  --radius: var(--radius-panel);
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  /* TX-8P is dark-locked; keep tokens identical */
+  color-scheme: dark;
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
+  html,
+  body,
+  #root {
+    height: 100%;
+    background-color: var(--chassis-base);
+    color: var(--engraving-fill);
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--lcd-green);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Never allow page scroll while dragging a control */
+  [data-tx-control] {
+    touch-action: none;
+  }
+}
+
+@utility engraved {
+  font-family: var(--font-engraved);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--engraving-fill);
+  text-shadow:
+    0 1px 0 oklch(0 0 0 / 0.55),
+    0 -1px 0 oklch(1 0 0 / 0.04);
+  font-weight: 500;
+}
+
+@utility engraved-dim {
+  font-family: var(--font-engraved);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--engraving-dim);
+  text-shadow: 0 1px 0 oklch(0 0 0 / 0.55);
+  font-weight: 500;
+}
+
+@utility panel-recessed {
+  background: linear-gradient(
+    180deg,
+    var(--panel-edge-shadow) 0%,
+    var(--panel-recess) 30%,
+    var(--panel-recess) 100%
+  );
+  box-shadow: var(--shadow-inset-panel);
+  border-radius: var(--radius-panel);
+}
+
+@utility chassis-surface {
+  background:
+    radial-gradient(
+      120% 80% at 50% -10%,
+      var(--chassis-highlight) 0%,
+      var(--chassis-base) 60%,
+      var(--chassis-shadow) 100%
+    );
+  box-shadow: var(--shadow-chassis);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }
