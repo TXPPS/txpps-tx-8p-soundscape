@@ -264,6 +264,17 @@
   border-radius: var(--radius-panel);
 }
 
+@utility tab-bar {
+  background: linear-gradient(
+    180deg,
+    var(--chassis-highlight) 0%,
+    var(--chassis-base) 100%
+  );
+  border-top: 1px solid oklch(1 0 0 / 0.15);
+  border-bottom: 1px solid oklch(0 0 0 / 0.28);
+  box-shadow: inset 0 -1px 0 var(--chassis-edge-dark);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
