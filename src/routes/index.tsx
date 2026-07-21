@@ -7,8 +7,7 @@ import {
   StatusLamp,
 } from "@/components/tx8p/chassis/Chassis";
 import { PresetLCD } from "@/components/tx8p/lcd/PresetLCD";
-import { PerfStrip } from "@/components/tx8p/perf/PerfStrip";
-import { Keyboard } from "@/components/tx8p/keyboard/Keyboard";
+import { PerformanceDeck } from "@/components/tx8p/perf/PerformanceDeck";
 import { TabBar } from "@/components/tx8p/tabs/TabBar";
 import { Editor } from "@/components/tx8p/editors/Editor";
 import { TopActions } from "@/components/tx8p/topbar/TopActions";
@@ -42,12 +41,12 @@ function Index() {
     <Chassis>
       {/* ===================== IDENTITY BAR ===================== */}
       <header
-        className="identity-panel px-3 py-3 md:px-6 md:py-4"
+        className="identity-panel px-3 py-2.5 md:px-6 md:py-3"
         aria-label="Instrument identity"
       >
         {/* Desktop / tablet: single row */}
         <div className="hidden items-center gap-5 md:flex">
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <IdentityMark />
             <ProductPlate />
             <span
@@ -66,7 +65,7 @@ function Index() {
         </div>
 
         {/* Phone portrait: two rows */}
-        <div className="flex flex-col gap-3 md:hidden">
+        <div className="flex flex-col gap-2 md:hidden">
           <div className="flex items-center gap-3">
             <div className="flex min-w-0 flex-col leading-tight">
               <span
@@ -114,27 +113,22 @@ function Index() {
       {/* ===================== PRIMARY TAB ROW ===================== */}
       <TabBar />
 
-      {/* ===================== CONTROL SURFACE ===================== */}
-      <div className="grid gap-3 px-3 py-3 md:px-6 md:py-4 lg:grid-cols-[190px_1fr]">
-        <div className="order-2 lg:order-1">
-          <PerfStrip />
-        </div>
-        <div className="order-1 lg:order-2 flex flex-col gap-3">
-          <Editor />
-          <div className="flex items-center justify-between px-1">
-            <EngravedLabel variant="chassis-dim">
-              TXPPS · TX-8P · Hybrid Poly Synth
-            </EngravedLabel>
-            <EngravedLabel variant="chassis-dim">
-              Made in Software · 8P
-            </EngravedLabel>
-          </div>
+      {/* ===================== FOCUSED EDITOR ===================== */}
+      <div className="flex flex-col gap-2 px-3 py-3 md:px-6 md:py-3">
+        <Editor />
+        <div className="flex items-center justify-between px-1">
+          <EngravedLabel variant="chassis-dim">
+            TXPPS · TX-8P · Hybrid Poly Synth
+          </EngravedLabel>
+          <EngravedLabel variant="chassis-dim">
+            Made in Software · 8P
+          </EngravedLabel>
         </div>
       </div>
 
-      {/* ===================== KEYBOARD ===================== */}
+      {/* ===================== INTEGRATED PERFORMANCE DECK ===================== */}
       <div className="mt-auto">
-        <Keyboard startOctave={3} octaveCount={3} />
+        <PerformanceDeck />
       </div>
 
       <SettingsDialog />
