@@ -1,10 +1,15 @@
 import { usePerfStore } from "@/state/perfStore";
 import { useUiStore } from "@/state/uiStore";
-import { LedButton, IconButton } from "@/components/tx8p/controls/LedButton";
 import { Wheel } from "@/components/tx8p/perf/Wheel";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { EngravedLabel } from "@/components/tx8p/chassis/Chassis";
+import { ProgramButton } from "@/components/tx8p/program/ProgramButton";
 
+/**
+ * Left-hand performance area — narrow vertical column, hardware-
+ * style. Levers for pitch/mod, small cream buttons for hold/octave/
+ * voice mode, and a separated red PANIC at the bottom so it can't
+ * be hit by accident.
+ */
 export function PerfStrip() {
   const {
     pitch,
@@ -22,107 +27,117 @@ export function PerfStrip() {
   } = usePerfStore();
   const flashLcd = useUiStore((s) => s.flashLcd);
 
-  const onPanic = () => {
-    panic();
-    flashLcd({ kind: "panic" }, 700);
-  };
+  const flashOctave = (next: number) =>
+    flashLcd(
+      { kind: "message", line1: "OCTAVE", line2: `${next >= 0 ? "+" : ""}${next}` },
+      700,
+    );
 
   return (
-    <div
-      className="panel-recessed flex flex-wrap items-center gap-4 p-3"
+    <aside
+      className="perf-panel flex flex-col gap-4 px-3 py-4"
       aria-label="Performance controls"
     >
-      <div className="flex items-end gap-3">
-        <Wheel value={pitch} onChange={setPitch} min={-1} max={1} spring label="PITCH" />
-        <Wheel value={mod} onChange={setMod} min={0} max={1} label="MOD" />
+      <EngravedLabel variant="chassis-dim" className="text-[9px]">
+        Performance
+      </EngravedLabel>
+
+      {/* Levers */}
+      <div className="flex justify-around">
+        <Wheel value={pitch} onChange={setPitch} min={-1} max={1} spring label="Bend" />
+        <Wheel value={mod} onChange={setMod} min={0} max={1} label="Mod" />
       </div>
 
-      <div className="flex flex-col items-center gap-1.5">
+      {/* Octave */}
+      <div className="flex flex-col gap-1.5">
+        <EngravedLabel variant="chassis-dim">Octave</EngravedLabel>
         <div className="flex items-center gap-1">
-          <IconButton
-            ariaLabel="Octave down"
+          <ProgramButton
+            color="cream"
             onClick={() => {
               stepOctave(-1);
-              flashLcd(
-                {
-                  kind: "message",
-                  line1: `OCTAVE  ${octave - 1 >= 0 ? "+" : ""}${octave - 1}`,
-                  line2: "",
-                },
-                700,
-              );
+              flashOctave(octave - 1);
             }}
+            ariaLabel="Octave down"
           >
-            <ChevronDown size={16} />
-          </IconButton>
+            −
+          </ProgramButton>
           <div
-            className="grid h-8 w-10 place-items-center rounded-[var(--radius-control)] font-mono text-[13px]"
+            className="grid h-[26px] flex-1 place-items-center rounded-[2px] font-mono text-[11px]"
             style={{
               background: "var(--lcd-bg)",
-              color: "var(--lcd-green)",
+              color: "var(--lcd-amber)",
               boxShadow: "var(--shadow-lcd-inset)",
-              textShadow: "0 0 4px var(--lcd-glow)",
+              textShadow: "0 0 3px var(--lcd-glow)",
             }}
           >
             {octave >= 0 ? `+${octave}` : octave}
           </div>
-          <IconButton
-            ariaLabel="Octave up"
+          <ProgramButton
+            color="cream"
             onClick={() => {
               stepOctave(1);
-              flashLcd(
-                {
-                  kind: "message",
-                  line1: `OCTAVE  ${octave + 1 >= 0 ? "+" : ""}${octave + 1}`,
-                  line2: "",
-                },
-                700,
-              );
+              flashOctave(octave + 1);
             }}
+            ariaLabel="Octave up"
           >
-            <ChevronUp size={16} />
-          </IconButton>
+            +
+          </ProgramButton>
         </div>
-        <EngravedLabel dim>Octave</EngravedLabel>
       </div>
 
-      <div className="flex flex-col items-center gap-1.5">
-        <LedButton active={hold} onClick={toggleHold} ariaLabel="Hold">
+      {/* Hold */}
+      <div className="flex flex-col gap-1.5">
+        <EngravedLabel variant="chassis-dim">Hold</EngravedLabel>
+        <ProgramButton color="amber" active={hold} onClick={toggleHold} ariaLabel="Hold">
           Hold
-        </LedButton>
+        </ProgramButton>
       </div>
 
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="flex gap-1">
+      {/* Voice mode */}
+      <div className="flex flex-col gap-1.5">
+        <EngravedLabel variant="chassis-dim">Voice</EngravedLabel>
+        <div className="flex flex-col gap-1">
           {(["POLY", "MONO", "UNISON"] as const).map((m) => (
-            <LedButton
+            <ProgramButton
               key={m}
+              color="cream"
               active={voiceMode === m}
               onClick={() => {
                 setVoiceMode(m);
                 flashLcd(
                   {
                     kind: "message",
-                    line1: `VOICE  ${m === "UNISON" ? `UNISON ${unisonCount}` : m}`,
-                    line2: m === "UNISON" ? "DETUNE  15 CT" : "",
+                    line1: "VOICE",
+                    line2: m === "UNISON" ? `UNISON ${unisonCount}` : m,
                   },
                   700,
                 );
               }}
-              compact
+              ariaLabel={`Voice mode ${m}`}
             >
               {m === "UNISON" ? `UNI ${unisonCount}` : m}
-            </LedButton>
+            </ProgramButton>
           ))}
         </div>
-        <EngravedLabel dim>Voice Mode</EngravedLabel>
       </div>
 
-      <div className="ml-auto">
-        <LedButton active={false} onClick={onPanic} color="red" ariaLabel="Panic">
+      <div className="flex-1" />
+
+      {/* Panic — visually separated, red, at the very bottom */}
+      <div className="flex flex-col items-stretch gap-1.5 pt-3">
+        <EngravedLabel variant="red">Emergency</EngravedLabel>
+        <ProgramButton
+          color="red"
+          onClick={() => {
+            panic();
+            flashLcd({ kind: "panic" }, 700);
+          }}
+          ariaLabel="Panic — all notes off"
+        >
           Panic
-        </LedButton>
+        </ProgramButton>
       </div>
-    </div>
+    </aside>
   );
 }

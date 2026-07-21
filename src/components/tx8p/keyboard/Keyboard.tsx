@@ -1,172 +1,192 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { usePerfStore } from "@/state/perfStore";
+import { useCallback, useRef, useState } from "react";
 
-// Simple visual keyboard (no sound in M1 — audio in M2).
-// Multi-touch, pointer-authoritative pattern established here for reuse.
+const OCTAVE_PATTERN = [
+  { note: "C", black: false },
+  { note: "C#", black: true },
+  { note: "D", black: false },
+  { note: "D#", black: true },
+  { note: "E", black: false },
+  { note: "F", black: false },
+  { note: "F#", black: true },
+  { note: "G", black: false },
+  { note: "G#", black: true },
+  { note: "A", black: false },
+  { note: "A#", black: true },
+  { note: "B", black: false },
+] as const;
 
-const WHITE_PATTERN = [0, 2, 4, 5, 7, 9, 11]; // C D E F G A B
-const BLACK_PATTERN: Record<number, number> = { 1: 0, 3: 1, 6: 3, 8: 4, 10: 5 }; // maps semitone -> white index
-
-interface KeyInfo {
+interface Key {
   midi: number;
-  isBlack: boolean;
-  whiteIndex: number;
+  note: string;
+  black: boolean;
+  octave: number;
 }
 
-function buildKeys(startMidi: number, whiteCount: number): KeyInfo[] {
-  const keys: KeyInfo[] = [];
-  let midi = startMidi;
-  let whitesEmitted = 0;
-  while (whitesEmitted < whiteCount) {
-    const pc = ((midi % 12) + 12) % 12;
-    if (WHITE_PATTERN.includes(pc)) {
-      keys.push({ midi, isBlack: false, whiteIndex: whitesEmitted });
-      whitesEmitted++;
-    } else {
-      keys.push({ midi, isBlack: true, whiteIndex: whitesEmitted - 1 });
-    }
-    midi++;
+function buildKeys(startOctave: number, octaveCount: number): Key[] {
+  const keys: Key[] = [];
+  for (let o = 0; o < octaveCount; o++) {
+    const octave = startOctave + o;
+    OCTAVE_PATTERN.forEach((k, i) => {
+      keys.push({
+        midi: (octave + 1) * 12 + i,
+        note: k.note,
+        black: k.black,
+        octave,
+      });
+    });
   }
+  keys.push({ midi: (startOctave + octaveCount + 1) * 12, note: "C", black: false, octave: startOctave + octaveCount });
   return keys;
 }
 
-export function Keyboard() {
-  const octave = usePerfStore((s) => s.octave);
-  const [width, setWidth] = useState(0);
+/**
+ * Wide integrated keyboard. Restrained ivory whites, dark charcoal
+ * blacks, subtle recess into the chassis. No oversized rounded
+ * corners — a real hardware feel.
+ */
+export function Keyboard({
+  startOctave = 3,
+  octaveCount = 3,
+}: {
+  startOctave?: number;
+  octaveCount?: number;
+}) {
+  const keys = buildKeys(startOctave, octaveCount);
+  const whites = keys.filter((k) => !k.black);
+  const [held, setHeld] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
-  const activePointers = useRef(new Map<number, number>()); // pointerId -> midi
-  const [pressed, setPressed] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const el = containerRef.current;
-    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
-    ro.observe(el);
-    setWidth(el.clientWidth);
-    return () => ro.disconnect();
-  }, []);
-
-  const whiteWidth = 44;
-  const whiteCount = Math.max(7, Math.floor(width / whiteWidth));
-  const startMidi = 48 + octave * 12; // C3 baseline
-
-  const keys = useMemo(
-    () => buildKeys(startMidi, whiteCount),
-    [startMidi, whiteCount],
-  );
-  const totalWidth = whiteCount * whiteWidth;
-
-  const setKey = (midi: number, on: boolean) => {
-    setPressed((prev) => {
+  const press = useCallback((midi: number) => {
+    setHeld((prev) => {
+      if (prev.has(midi)) return prev;
       const next = new Set(prev);
-      if (on) next.add(midi);
-      else next.delete(midi);
+      next.add(midi);
       return next;
     });
-  };
+  }, []);
+  const release = useCallback((midi: number) => {
+    setHeld((prev) => {
+      if (!prev.has(midi)) return prev;
+      const next = new Set(prev);
+      next.delete(midi);
+      return next;
+    });
+  }, []);
 
-  const onPointerDown = (e: React.PointerEvent, midi: number) => {
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    activePointers.current.set(e.pointerId, midi);
-    setKey(midi, true);
-    // TODO M2: engine.noteOn(midi, vel)
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!activePointers.current.has(e.pointerId)) return;
-    // Slide-to-play across keys
-    const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-    if (!el) return;
-    const nextMidi = Number(el.dataset.midi);
-    if (!nextMidi) return;
-    const prevMidi = activePointers.current.get(e.pointerId)!;
-    if (nextMidi !== prevMidi) {
-      setKey(prevMidi, false);
-      setKey(nextMidi, true);
-      activePointers.current.set(e.pointerId, nextMidi);
-    }
-  };
-  const onPointerUp = (e: React.PointerEvent) => {
-    const midi = activePointers.current.get(e.pointerId);
-    if (midi !== undefined) {
-      setKey(midi, false);
-      activePointers.current.delete(e.pointerId);
-    }
-    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-  };
-
+  const whiteCount = whites.length;
+  // Slight top recess so keyboard reads as integrated into chassis.
   return (
     <div
-      ref={containerRef}
-      className="panel-recessed relative overflow-hidden p-2"
-      style={{ touchAction: "none" }}
+      className="w-full"
+      style={{
+        background: "linear-gradient(180deg, var(--chassis-shadow) 0%, var(--chassis-base) 100%)",
+        padding: "8px 10px 14px",
+        boxShadow:
+          "inset 0 6px 10px -6px oklch(0 0 0 / 0.55), inset 0 -1px 0 var(--chassis-edge-dark)",
+      }}
     >
       <div
+        ref={containerRef}
+        role="group"
+        aria-label="Playable keyboard"
         className="relative mx-auto"
-        style={{ width: totalWidth, height: 150 }}
-        onPointerMove={onPointerMove}
+        style={{
+          height: 140,
+          width: "100%",
+          maxWidth: "100%",
+        }}
       >
-        {/* white keys */}
-        {keys
-          .filter((k) => !k.isBlack)
-          .map((k) => {
-            const isPressed = pressed.has(k.midi);
+        {/* White keys */}
+        <div className="flex h-full w-full">
+          {whites.map((k) => {
+            const active = held.has(k.midi);
+            const isC = k.note === "C";
             return (
               <button
                 key={k.midi}
-                data-midi={k.midi}
+                type="button"
                 data-tx-control
-                onPointerDown={(e) => onPointerDown(e, k.midi)}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-                aria-label={`Note ${k.midi}`}
-                className="absolute top-0 rounded-b-[3px] transition-[transform,filter] duration-75"
-                style={{
-                  left: k.whiteIndex * whiteWidth,
-                  width: whiteWidth - 1,
-                  height: 150,
-                  background: isPressed
-                    ? "linear-gradient(180deg, oklch(0.90 0.02 80) 0%, oklch(0.72 0.02 80) 100%)"
-                    : "linear-gradient(180deg, oklch(0.94 0.008 80) 0%, oklch(0.80 0.008 80) 100%)",
-                  boxShadow:
-                    "inset 0 -3px 0 oklch(0 0 0 / 0.25), inset 0 0 0 1px oklch(0 0 0 / 0.35), 0 2px 3px oklch(0 0 0 / 0.4)",
-                  transform: isPressed ? "translateY(1px)" : "none",
+                aria-label={`${k.note}${k.octave}`}
+                aria-pressed={active}
+                onPointerDown={(e) => {
+                  (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                  press(k.midi);
                 }}
-              />
+                onPointerUp={() => release(k.midi)}
+                onPointerLeave={() => release(k.midi)}
+                onPointerCancel={() => release(k.midi)}
+                className="relative flex-1 select-none"
+                style={{
+                  background: active
+                    ? "linear-gradient(180deg, var(--key-white-shadow) 0%, var(--key-white) 90%)"
+                    : "linear-gradient(180deg, var(--key-white) 0%, var(--key-white) 88%, var(--key-white-shadow) 100%)",
+                  borderRight: "1px solid oklch(0 0 0 / 0.35)",
+                  boxShadow: active
+                    ? "inset 0 2px 3px oklch(0 0 0 / 0.35)"
+                    : "inset 0 -3px 0 oklch(0 0 0 / 0.10)",
+                  borderRadius: "0 0 2px 2px",
+                }}
+              >
+                {isC && (
+                  <span
+                    className="pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 font-mono text-[8px]"
+                    style={{ color: "var(--engraving-chassis-dim)" }}
+                  >
+                    C{k.octave}
+                  </span>
+                )}
+              </button>
             );
           })}
-        {/* black keys */}
-        {keys
-          .filter((k) => k.isBlack)
-          .map((k) => {
-            const pc = ((k.midi % 12) + 12) % 12;
-            const wIdx = BLACK_PATTERN[pc];
-            if (wIdx === undefined) return null;
-            const left = (k.whiteIndex + 1) * whiteWidth - whiteWidth * 0.35;
-            const isPressed = pressed.has(k.midi);
-            return (
-              <button
-                key={k.midi}
-                data-midi={k.midi}
-                data-tx-control
-                onPointerDown={(e) => onPointerDown(e, k.midi)}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-                aria-label={`Note ${k.midi}`}
-                className="absolute top-0 rounded-b-[3px]"
-                style={{
-                  left,
-                  width: whiteWidth * 0.7,
-                  height: 95,
-                  background: isPressed
-                    ? "linear-gradient(180deg, oklch(0.28 0.004 60) 0%, oklch(0.18 0.004 60) 100%)"
-                    : "linear-gradient(180deg, oklch(0.20 0.004 60) 0%, oklch(0.10 0.004 60) 100%)",
-                  boxShadow:
-                    "inset 0 -2px 0 oklch(0 0 0 / 0.6), 0 2px 3px oklch(0 0 0 / 0.7), inset 0 0 0 1px oklch(0 0 0 / 0.6)",
-                  transform: isPressed ? "translateY(1px)" : "none",
-                }}
-              />
-            );
-          })}
+        </div>
+
+        {/* Black keys */}
+        <div className="pointer-events-none absolute inset-0">
+          {(() => {
+            const nodes: React.ReactNode[] = [];
+            const whiteWidthPct = 100 / whiteCount;
+            let whiteIdx = 0;
+            keys.forEach((k) => {
+              if (!k.black) {
+                whiteIdx++;
+                return;
+              }
+              const leftPct = whiteIdx * whiteWidthPct - whiteWidthPct * 0.3;
+              const active = held.has(k.midi);
+              nodes.push(
+                <button
+                  key={k.midi}
+                  type="button"
+                  data-tx-control
+                  aria-label={`${k.note}${k.octave}`}
+                  aria-pressed={active}
+                  onPointerDown={(e) => {
+                    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                    press(k.midi);
+                  }}
+                  onPointerUp={() => release(k.midi)}
+                  onPointerLeave={() => release(k.midi)}
+                  onPointerCancel={() => release(k.midi)}
+                  className="pointer-events-auto absolute"
+                  style={{
+                    left: `${leftPct}%`,
+                    top: 0,
+                    width: `${whiteWidthPct * 0.6}%`,
+                    height: "62%",
+                    borderRadius: "0 0 2px 2px",
+                    background: active
+                      ? "linear-gradient(180deg, oklch(0.12 0.004 60) 0%, oklch(0.20 0.004 60) 100%)"
+                      : "linear-gradient(180deg, var(--key-black-top) 0%, var(--key-black) 70%, oklch(0.12 0.004 60) 100%)",
+                    boxShadow: active
+                      ? "inset 0 3px 4px oklch(0 0 0 / 0.7)"
+                      : "0 2px 3px oklch(0 0 0 / 0.55), inset 0 -2px 0 oklch(0 0 0 / 0.5)",
+                  }}
+                />,
+              );
+            });
+            return nodes;
+          })()}
+        </div>
       </div>
     </div>
   );

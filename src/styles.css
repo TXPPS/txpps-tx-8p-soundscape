@@ -5,10 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * TXPPS TX-8P Design System
- * Industrial hardware aesthetic. Original design inspired by
- * mid-1980s Japanese polyphonic synthesizers. All colors oklch.
- * No component should ship a raw hex, text-white, or bg-black.
+ * TXPPS TX-8P Design System — v2 (JX-8P influenced)
+ * Warm medium-gray chassis, charcoal programming strip,
+ * cream program buttons, muted red/amber/blue accents,
+ * compact smoked amber LCD. Sparse, technical, 1980s
+ * Japanese poly-synth character. Original TXPPS design.
  */
 
 @font-face {
@@ -20,49 +21,43 @@
 }
 
 @theme inline {
-  /* shadcn compatibility (restyled to chassis tokens) */
+  /* shadcn compatibility (mapped to chassis tokens) */
   --color-background: var(--chassis-base);
   --color-foreground: var(--engraving-fill);
-  --color-card: var(--panel-recess);
+  --color-card: var(--panel-strip);
   --color-card-foreground: var(--engraving-fill);
-  --color-popover: var(--panel-recess);
+  --color-popover: var(--panel-strip);
   --color-popover-foreground: var(--engraving-fill);
-  --color-primary: var(--lcd-green);
-  --color-primary-foreground: var(--chassis-base);
-  --color-secondary: var(--panel-recess);
+  --color-primary: var(--btn-red);
+  --color-primary-foreground: var(--btn-cream);
+  --color-secondary: var(--panel-strip);
   --color-secondary-foreground: var(--engraving-fill);
-  --color-muted: var(--panel-recess);
+  --color-muted: var(--chassis-highlight);
   --color-muted-foreground: var(--engraving-dim);
-  --color-accent: var(--accent-amber);
-  --color-accent-foreground: var(--chassis-base);
-  --color-destructive: var(--accent-red);
-  --color-destructive-foreground: var(--chassis-base);
+  --color-accent: var(--btn-amber);
+  --color-accent-foreground: var(--chassis-shadow);
+  --color-destructive: var(--btn-red);
+  --color-destructive-foreground: var(--btn-cream);
   --color-border: var(--chassis-shadow);
-  --color-input: var(--panel-recess);
-  --color-ring: var(--lcd-green);
+  --color-input: var(--panel-strip);
+  --color-ring: var(--btn-red);
 
-  /* TX-8P chassis tokens */
+  /* TX-8P chassis */
   --color-chassis-base: var(--chassis-base);
   --color-chassis-highlight: var(--chassis-highlight);
   --color-chassis-shadow: var(--chassis-shadow);
-  --color-panel-recess: var(--panel-recess);
+  --color-panel-strip: var(--panel-strip);
   --color-engraving-fill: var(--engraving-fill);
   --color-engraving-dim: var(--engraving-dim);
+  --color-btn-cream: var(--btn-cream);
+  --color-btn-red: var(--btn-red);
+  --color-btn-amber: var(--btn-amber);
+  --color-btn-blue: var(--btn-blue);
   --color-lcd-bg: var(--lcd-bg);
-  --color-lcd-green: var(--lcd-green);
-  --color-lcd-green-dim: var(--lcd-green-dim);
-  --color-accent-amber: var(--accent-amber);
-  --color-accent-red: var(--accent-red);
-  --color-led-green-on: var(--led-green-on);
-  --color-led-green-off: var(--led-green-off);
-  --color-led-amber-on: var(--led-amber-on);
-  --color-led-red-on: var(--led-red-on);
-  --color-knob-face: var(--knob-face);
-  --color-knob-cap: var(--knob-cap);
-  --color-knob-indicator: var(--knob-indicator);
+  --color-lcd-amber: var(--lcd-amber);
 
-  --radius-panel: 6px;
-  --radius-control: 4px;
+  --radius-panel: 4px;
+  --radius-control: 2px;
   --radius-cap: 50%;
 
   --font-sans: "IBM Plex Sans", "Inter", system-ui, sans-serif;
@@ -71,55 +66,64 @@
 }
 
 :root {
-  /* Chassis — warm charcoal, not pure black */
-  --chassis-base: oklch(0.24 0.006 60);
-  --chassis-highlight: oklch(0.30 0.006 60);
-  --chassis-shadow: oklch(0.16 0.006 60);
-  --chassis-edge: oklch(0.36 0.005 60);
+  /* Warm medium-gray chassis (JX-8P family) */
+  --chassis-base: oklch(0.60 0.006 90);          /* #838278-ish */
+  --chassis-highlight: oklch(0.68 0.006 90);     /* upper identity area */
+  --chassis-highlight-top: oklch(0.74 0.006 90);
+  --chassis-shadow: oklch(0.44 0.006 90);
+  --chassis-edge-light: oklch(0.82 0.005 90);
+  --chassis-edge-dark: oklch(0.34 0.006 90);
 
-  /* Recessed panel — slightly darker than chassis */
-  --panel-recess: oklch(0.19 0.005 60);
-  --panel-edge-highlight: oklch(0.32 0.005 60);
-  --panel-edge-shadow: oklch(0.12 0.005 60);
+  /* Charcoal programming strip */
+  --panel-strip: oklch(0.28 0.005 60);
+  --panel-strip-top: oklch(0.32 0.005 60);
+  --panel-strip-bottom: oklch(0.22 0.005 60);
+  --panel-strip-edge: oklch(0.14 0.004 60);
 
-  /* Engraved labels — off-white with a hint of warmth */
-  --engraving-fill: oklch(0.86 0.008 80);
-  --engraving-dim: oklch(0.60 0.008 80);
-  --engraving-highlight: oklch(0.96 0.008 80);
+  /* Cream program buttons */
+  --btn-cream: oklch(0.90 0.015 85);
+  --btn-cream-top: oklch(0.94 0.014 85);
+  --btn-cream-bottom: oklch(0.84 0.017 85);
+  --btn-cream-shadow: oklch(0.62 0.014 85);
+  --btn-cream-text: oklch(0.28 0.005 60);
 
-  /* LCD — vintage green */
-  --lcd-bg: oklch(0.30 0.06 145);
-  --lcd-green: oklch(0.82 0.19 145);
-  --lcd-green-dim: oklch(0.55 0.14 145);
-  --lcd-glow: oklch(0.82 0.19 145 / 0.55);
-  --lcd-scanline: oklch(0 0 0 / 0.18);
+  /* Accent buttons — muted, era-appropriate */
+  --btn-red: oklch(0.60 0.16 22);
+  --btn-red-top: oklch(0.66 0.17 22);
+  --btn-red-text: oklch(0.98 0.010 85);
+  --btn-amber: oklch(0.74 0.14 78);
+  --btn-amber-top: oklch(0.80 0.15 78);
+  --btn-amber-text: oklch(0.24 0.02 60);
+  --btn-blue: oklch(0.54 0.09 250);
+  --btn-blue-top: oklch(0.60 0.10 250);
+  --btn-blue-text: oklch(0.98 0.010 85);
 
-  /* Accents */
-  --accent-amber: oklch(0.78 0.16 75);
-  --accent-red: oklch(0.62 0.22 25);
+  /* Engraved / silkscreen text on chassis + strip */
+  --engraving-fill: oklch(0.92 0.005 85);
+  --engraving-dim: oklch(0.70 0.006 85);
+  --engraving-chassis: oklch(0.28 0.005 90);      /* dark text on gray */
+  --engraving-chassis-dim: oklch(0.40 0.005 90);
+  --engraving-red: oklch(0.50 0.14 22);           /* small red silkscreen */
 
-  /* LEDs */
-  --led-green-on: oklch(0.82 0.22 145);
-  --led-green-off: oklch(0.30 0.04 145);
-  --led-amber-on: oklch(0.80 0.18 75);
-  --led-red-on: oklch(0.65 0.24 25);
+  /* LCD — smoked amber window */
+  --lcd-bg: oklch(0.18 0.02 55);
+  --lcd-bg-top: oklch(0.14 0.02 55);
+  --lcd-amber: oklch(0.78 0.16 65);
+  --lcd-amber-dim: oklch(0.50 0.11 65);
+  --lcd-glow: oklch(0.78 0.16 65 / 0.35);
+  --lcd-scanline: oklch(0 0 0 / 0.22);
 
-  /* Knob palette */
-  --knob-face: oklch(0.22 0.005 60);
-  --knob-face-highlight: oklch(0.32 0.005 60);
-  --knob-cap: oklch(0.18 0.004 60);
-  --knob-indicator: oklch(0.90 0.010 80);
-  --knob-shadow: oklch(0.10 0.004 60);
+  /* Small status LEDs */
+  --led-red-on: oklch(0.66 0.22 25);
+  --led-red-off: oklch(0.34 0.06 25);
+  --led-amber-on: oklch(0.80 0.18 78);
+  --led-green-on: oklch(0.75 0.19 145);
 
-  /* Spacing scale */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-7: 32px;
-  --space-8: 40px;
+  /* Keyboard */
+  --key-white: oklch(0.94 0.008 85);              /* restrained ivory */
+  --key-white-shadow: oklch(0.78 0.010 85);
+  --key-black: oklch(0.22 0.004 60);
+  --key-black-top: oklch(0.30 0.004 60);
 
   /* Motion */
   --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
@@ -129,28 +133,29 @@
 
   /* Shadows */
   --shadow-chassis:
-    inset 0 1px 0 var(--chassis-edge),
-    inset 0 -1px 0 var(--chassis-shadow),
-    0 24px 60px -20px oklch(0 0 0 / 0.6);
-  --shadow-inset-panel:
-    inset 0 1px 0 var(--panel-edge-shadow),
-    inset 0 -1px 0 var(--panel-edge-highlight),
-    inset 0 0 0 1px oklch(0 0 0 / 0.4);
-  --shadow-cap:
-    0 1px 0 var(--knob-face-highlight),
-    0 2px 4px oklch(0 0 0 / 0.6),
-    inset 0 -1px 2px oklch(0 0 0 / 0.5);
+    inset 0 1px 0 var(--chassis-edge-light),
+    inset 0 -1px 0 var(--chassis-edge-dark),
+    0 24px 60px -20px oklch(0 0 0 / 0.5);
+  --shadow-strip-inset:
+    inset 0 1px 0 oklch(0 0 0 / 0.6),
+    inset 0 -1px 0 oklch(1 0 0 / 0.04),
+    inset 0 0 0 1px var(--panel-strip-edge);
   --shadow-lcd-inset:
-    inset 0 2px 6px oklch(0 0 0 / 0.6),
-    inset 0 0 0 1px oklch(0 0 0 / 0.5);
-  --shadow-led-on: 0 0 6px var(--led-green-on), 0 0 12px var(--led-green-on);
+    inset 0 2px 6px oklch(0 0 0 / 0.7),
+    inset 0 0 0 1px oklch(0 0 0 / 0.65);
+  --shadow-cream-btn:
+    0 1px 0 oklch(1 0 0 / 0.35) inset,
+    0 -1px 0 var(--btn-cream-shadow) inset,
+    0 1px 2px oklch(0 0 0 / 0.55);
+  --shadow-cream-btn-down:
+    0 1px 2px oklch(0 0 0 / 0.4) inset,
+    0 0 0 1px oklch(0 0 0 / 0.5);
 
   --radius: var(--radius-panel);
 }
 
 .dark {
-  /* TX-8P is dark-locked; keep tokens identical */
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 @layer base {
@@ -159,7 +164,7 @@
   #root {
     height: 100%;
     background-color: var(--chassis-base);
-    color: var(--engraving-fill);
+    color: var(--engraving-chassis);
   }
 
   body {
@@ -170,12 +175,11 @@
   }
 
   *:focus-visible {
-    outline: 2px solid var(--lcd-green);
+    outline: 2px solid var(--btn-red);
     outline-offset: 2px;
     border-radius: 2px;
   }
 
-  /* Never allow page scroll while dragging a control */
   [data-tx-control] {
     touch-action: none;
   }
@@ -185,42 +189,79 @@
   font-family: var(--font-engraved);
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: var(--engraving-fill);
-  text-shadow:
-    0 1px 0 oklch(0 0 0 / 0.55),
-    0 -1px 0 oklch(1 0 0 / 0.04);
-  font-weight: 500;
+  color: var(--engraving-chassis);
+  font-weight: 600;
 }
 
 @utility engraved-dim {
   font-family: var(--font-engraved);
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: var(--engraving-dim);
-  text-shadow: 0 1px 0 oklch(0 0 0 / 0.55);
+  color: var(--engraving-chassis-dim);
   font-weight: 500;
 }
 
-@utility panel-recessed {
-  background: linear-gradient(
-    180deg,
-    var(--panel-edge-shadow) 0%,
-    var(--panel-recess) 30%,
-    var(--panel-recess) 100%
-  );
-  box-shadow: var(--shadow-inset-panel);
-  border-radius: var(--radius-panel);
+@utility engraved-light {
+  font-family: var(--font-engraved);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--engraving-fill);
+  font-weight: 500;
+  text-shadow: 0 1px 0 oklch(0 0 0 / 0.55);
+}
+
+@utility engraved-red {
+  font-family: var(--font-engraved);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--engraving-red);
+  font-weight: 600;
 }
 
 @utility chassis-surface {
   background:
-    radial-gradient(
-      120% 80% at 50% -10%,
-      var(--chassis-highlight) 0%,
-      var(--chassis-base) 60%,
-      var(--chassis-shadow) 100%
+    linear-gradient(
+      180deg,
+      var(--chassis-highlight-top) 0%,
+      var(--chassis-highlight) 22%,
+      var(--chassis-base) 55%,
+      var(--chassis-base) 100%
     );
   box-shadow: var(--shadow-chassis);
+}
+
+@utility identity-panel {
+  background: linear-gradient(
+    180deg,
+    var(--chassis-highlight-top) 0%,
+    var(--chassis-highlight) 100%
+  );
+  border-bottom: 1px solid oklch(0 0 0 / 0.15);
+  box-shadow: inset 0 -1px 0 oklch(1 0 0 / 0.18);
+}
+
+@utility program-strip {
+  background: linear-gradient(
+    180deg,
+    var(--panel-strip-top) 0%,
+    var(--panel-strip) 45%,
+    var(--panel-strip-bottom) 100%
+  );
+  box-shadow: var(--shadow-strip-inset);
+  border-radius: var(--radius-panel);
+}
+
+@utility perf-panel {
+  background: linear-gradient(
+    180deg,
+    var(--chassis-highlight) 0%,
+    var(--chassis-base) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 var(--chassis-edge-light),
+    inset 0 -1px 0 var(--chassis-edge-dark),
+    inset -1px 0 0 oklch(0 0 0 / 0.18);
+  border-radius: var(--radius-panel);
 }
 
 @media (prefers-reduced-motion: reduce) {

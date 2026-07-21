@@ -9,6 +9,12 @@ interface WheelProps {
   label: string;
 }
 
+/**
+ * Compact vertical hardware lever slider (not a wheel).
+ * Narrow travel, flat cap, ivory indicator line. Replaces the
+ * previous oversized modern-controller wheel with something
+ * closer in feel to a 1980s programming synth's performance strip.
+ */
 export function Wheel({ value, onChange, min, max, spring, label }: WheelProps) {
   const ref = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
@@ -25,7 +31,7 @@ export function Wheel({ value, onChange, min, max, spring, label }: WheelProps) 
   }, [spring, onChange, min, max]);
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="flex flex-col items-center gap-1">
       <div
         ref={ref}
         data-tx-control
@@ -50,43 +56,67 @@ export function Wheel({ value, onChange, min, max, spring, label }: WheelProps) 
         }}
         onPointerUp={release}
         onPointerCancel={release}
-        className="relative overflow-hidden"
+        className="relative"
         style={{
-          width: 30,
-          height: 110,
-          borderRadius: 6,
+          width: 18,
+          height: 96,
+          borderRadius: 2,
           background:
-            "linear-gradient(90deg, oklch(0.14 0.004 60) 0%, oklch(0.22 0.004 60) 50%, oklch(0.14 0.004 60) 100%)",
+            "linear-gradient(180deg, oklch(0.16 0.004 60) 0%, oklch(0.22 0.004 60) 100%)",
           boxShadow:
-            "inset 0 0 0 1px oklch(0 0 0 / 0.6), inset 0 2px 4px oklch(0 0 0 / 0.5)",
+            "inset 0 0 0 1px oklch(0 0 0 / 0.6), inset 0 2px 4px oklch(0 0 0 / 0.7)",
         }}
       >
-        {/* wheel indicator groove */}
-        <div
-          className="absolute left-0 right-0 h-[14px]"
-          style={{
-            top: `calc(${y}% - 7px)`,
-            background:
-              "linear-gradient(180deg, oklch(0.36 0.006 60) 0%, oklch(0.22 0.005 60) 50%, oklch(0.12 0.004 60) 100%)",
-            boxShadow:
-              "0 1px 0 oklch(1 0 0 / 0.05), 0 -1px 0 oklch(0 0 0 / 0.6), inset 0 0 0 1px oklch(0 0 0 / 0.4)",
-            transition: dragging ? "none" : "top 180ms var(--ease-standard)",
-          }}
-        />
-        {/* center marker for pitch */}
+        {/* travel scale ticks */}
+        {[0, 0.25, 0.5, 0.75, 1].map((p) => (
+          <div
+            key={p}
+            aria-hidden
+            className="absolute left-full ml-1 h-px w-1.5"
+            style={{
+              top: `${p * 100}%`,
+              background: "var(--engraving-chassis-dim)",
+              opacity: p === 0.5 ? 0.9 : 0.5,
+            }}
+          />
+        ))}
+        {/* center reference for spring lever */}
         {spring && (
           <div
             aria-hidden
             className="absolute inset-x-0 h-px"
             style={{
               top: "50%",
-              background: "var(--engraving-dim)",
-              opacity: 0.4,
+              background: "oklch(1 0 0 / 0.15)",
             }}
           />
         )}
+        {/* lever cap */}
+        <div
+          className="absolute -left-1 -right-1 h-[10px]"
+          style={{
+            top: `calc(${y}% - 5px)`,
+            borderRadius: 2,
+            background:
+              "linear-gradient(180deg, oklch(0.38 0.005 60) 0%, oklch(0.26 0.005 60) 50%, oklch(0.16 0.004 60) 100%)",
+            boxShadow:
+              "0 1px 0 oklch(1 0 0 / 0.10), 0 -1px 0 oklch(0 0 0 / 0.5), inset 0 0 0 1px oklch(0 0 0 / 0.5)",
+            transition: dragging ? "none" : "top 180ms var(--ease-standard)",
+          }}
+        >
+          <div
+            aria-hidden
+            className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2"
+            style={{ background: "var(--key-white)" }}
+          />
+        </div>
       </div>
-      <span className="engraved text-[9px]">{label}</span>
+      <span
+        className="engraved text-[8px]"
+        style={{ color: "var(--engraving-chassis)" }}
+      >
+        {label}
+      </span>
     </div>
   );
 }
