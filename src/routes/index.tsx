@@ -9,9 +9,11 @@ import {
 import { PresetLCD } from "@/components/tx8p/lcd/PresetLCD";
 import { PerfStrip } from "@/components/tx8p/perf/PerfStrip";
 import { Keyboard } from "@/components/tx8p/keyboard/Keyboard";
-import { ProgramStrip } from "@/components/tx8p/program/ProgramStrip";
-import { ProgramButton } from "@/components/tx8p/program/ProgramButton";
-import { usePresetStore } from "@/state/presetStore";
+import { TabBar } from "@/components/tx8p/tabs/TabBar";
+import { Editor } from "@/components/tx8p/editors/Editor";
+import { TopActions } from "@/components/tx8p/topbar/TopActions";
+import { PresetNav } from "@/components/tx8p/topbar/PresetNav";
+import { SettingsDialog } from "@/components/tx8p/topbar/SettingsDialog";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -36,44 +38,70 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const dirty = usePresetStore((s) => s.dirty);
-
   return (
     <Chassis>
       {/* ===================== IDENTITY BAR ===================== */}
       <header
-        className="identity-panel flex flex-wrap items-center gap-6 px-4 py-4 md:px-8 md:py-5"
+        className="identity-panel px-3 py-3 md:px-6 md:py-4"
         aria-label="Instrument identity"
       >
-        <div className="flex flex-col gap-2">
-          <IdentityMark />
-          <ProductPlate />
-          <span
-            className="font-sans text-[10px] font-medium tracking-[0.28em]"
-            style={{ color: "var(--engraving-chassis-dim)" }}
-          >
-            HYBRID POLY SYNTHESIZER · 8 VOICES
-          </span>
+        {/* Desktop / tablet: single row */}
+        <div className="hidden items-center gap-5 md:flex">
+          <div className="flex min-w-0 flex-col gap-1">
+            <IdentityMark />
+            <ProductPlate />
+            <span
+              className="font-sans text-[10px] font-medium tracking-[0.28em]"
+              style={{ color: "var(--engraving-chassis-dim)" }}
+            >
+              HYBRID POLY SYNTHESIZER · 8 VOICES
+            </span>
+          </div>
+          <div className="ml-auto flex items-center gap-4">
+            <StatusLamp on />
+            <PresetLCD />
+            <PresetNav />
+            <TopActions />
+          </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-4">
-          <StatusLamp on />
-          <PresetLCD />
-          <div className="hidden items-center gap-2 md:flex">
-            <ProgramButton color="cream" ariaLabel="Write">
-              Write
-            </ProgramButton>
-            <ProgramButton color="cream" ariaLabel="Compare">
-              Compare
-            </ProgramButton>
-            <ProgramButton color="amber" active={dirty} ariaLabel="Edit indicator">
-              Edit
-            </ProgramButton>
+        {/* Phone portrait: two rows */}
+        <div className="flex flex-col gap-3 md:hidden">
+          <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-col leading-tight">
+              <span
+                className="font-sans text-[9px] font-semibold tracking-[0.3em]"
+                style={{ color: "var(--engraving-chassis-dim)" }}
+              >
+                TXPPS
+              </span>
+              <span
+                className="font-sans font-semibold"
+                style={{
+                  color: "var(--engraving-chassis)",
+                  fontSize: 22,
+                  letterSpacing: "0.02em",
+                  lineHeight: 1,
+                }}
+              >
+                TX-8P
+              </span>
+            </div>
+            <div className="ml-auto flex items-center gap-1.5">
+              <StatusLamp on />
+              <TopActions />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <PresetLCD />
+            <div className="ml-auto">
+              <PresetNav />
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Chassis seam under identity */}
+      {/* Chassis seam */}
       <div
         aria-hidden
         className="h-[2px] w-full"
@@ -83,13 +111,16 @@ function Index() {
         }}
       />
 
+      {/* ===================== PRIMARY TAB ROW ===================== */}
+      <TabBar />
+
       {/* ===================== CONTROL SURFACE ===================== */}
-      <div className="grid gap-3 px-3 py-4 md:px-6 md:py-5 lg:grid-cols-[190px_1fr]">
+      <div className="grid gap-3 px-3 py-3 md:px-6 md:py-4 lg:grid-cols-[190px_1fr]">
         <div className="order-2 lg:order-1">
           <PerfStrip />
         </div>
         <div className="order-1 lg:order-2 flex flex-col gap-3">
-          <ProgramStrip />
+          <Editor />
           <div className="flex items-center justify-between px-1">
             <EngravedLabel variant="chassis-dim">
               TXPPS · TX-8P · Hybrid Poly Synth
@@ -105,6 +136,8 @@ function Index() {
       <div className="mt-auto">
         <Keyboard startOctave={3} octaveCount={3} />
       </div>
+
+      <SettingsDialog />
     </Chassis>
   );
 }
