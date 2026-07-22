@@ -16,9 +16,51 @@
  * Exit code 0 = all assertions passed.
  */
 import { spawn } from "node:child_process";
+import { existsSync, readdirSync } from "node:fs";
 import net from "node:net";
+import os from "node:os";
+import path from "node:path";
 
-const CHROME = process.env.TX8P_CHROME || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+function findChrome() {
+  if (process.env.TX8P_CHROME) return process.env.TX8P_CHROME;
+  const home = os.homedir();
+  const candidates = [
+    // Playwright-managed Chromium (Windows / macOS / Linux cache dirs).
+    ...["ms-playwright"].flatMap((dir) => {
+      const base =
+        process.platform === "win32"
+          ? path.join(home, "AppData", "Local", dir)
+          : process.platform === "darwin"
+            ? path.join(home, "Library", "Caches", dir)
+            : path.join(home, ".cache", dir);
+      if (!existsSync(base)) return [];
+      return readdirSync(base)
+        .filter((n) => /^chromium-\d+$/.test(n))
+        .sort()
+        .reverse()
+        .flatMap((n) => [
+          path.join(base, n, "chrome-win64", "chrome.exe"),
+          path.join(base, n, "chrome-win", "chrome.exe"),
+          path.join(base, n, "chrome-linux", "chrome"),
+          path.join(base, n, "chrome-mac", "Chromium.app", "Contents", "MacOS", "Chromium"),
+        ]);
+    }),
+    "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+  ];
+  for (const c of candidates) if (existsSync(c)) return c;
+  throw new Error(
+    "No Chromium/Chrome binary found. Set TX8P_CHROME=<path-to-chrome> or run `npx playwright install chromium`.",
+  );
+}
+
+const CHROME = findChrome();
 const APP_PORT = 45999;
 const CDP_PORT = 45123;
 const APP_URL = `http://127.0.0.1:${APP_PORT}/`;
@@ -117,7 +159,7 @@ async function main() {
       "--autoplay-policy=no-user-gesture-required",
       "--use-fake-ui-for-media-stream",
       "--no-first-run",
-      "--user-data-dir=/tmp/tx8p-chrome-profile",
+      `--user-data-dir=${path.join(os.tmpdir(), "tx8p-chrome-profile")}`,
       "about:blank",
     ],
     { stdio: ["ignore", "ignore", "inherit"], env: process.env },
@@ -167,6 +209,19 @@ async function main() {
         let s=0; for(let i=0;i<buf.length;i++) s+=buf[i]*buf[i]; return Math.sqrt(s/buf.length); }
     };`;
   await evaluate(setup);
+
+  // The AudioContext starts suspended; the very first pressNote() call only
+  // queues a pending note and kicks off an async resume (see SynthEngine's
+  // ensureRunning/pending-note contract). Warm up the context first so this
+  // assertion measures steady-state audio, same as every later note in this
+  // run — matching real usage where the resume settles before the note ends.
+  await evaluate(`(async()=>{
+    const t=window.__t; const h=t.eng.pressNote('screen','warmup',60,0.01);
+    for(let i=0;i<40;i++){ if(t.eng.getStatus()==='ready') break; await new Promise(r=>setTimeout(r,50)); }
+    t.eng.releaseNote(h);
+    await new Promise(r=>setTimeout(r,300));
+    return true;
+  })()`);
 
   // 1) first note → audible
   const firstNote = await evaluate(`(async()=>{
