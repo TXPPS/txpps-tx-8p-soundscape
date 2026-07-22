@@ -35,20 +35,41 @@ export type VoiceHandle = number;
 
 export interface AudioDiagnostics {
   status: EngineStatus;
+  lifecycleState: EngineStatus;
   contextState: string;
+  rawContextState: string;
   running: boolean;
   destinationConnected: boolean;
+  audioGraphGeneration: number;
   sampleRate: number;
   baseLatency: number | null;
   outputLatency: number | null;
   contextsCreated: number;
   startupAttempts: number;
+  recoveryAttempts: number;
+  lastRecoveryTrigger: string | null;
+  stateBeforeResume: string | null;
+  resumePromiseResolved: boolean;
+  resumePromiseRejected: boolean;
+  stateImmediatelyAfterResume: string | null;
+  stateAfter50ms: string | null;
+  stateAfter250ms: string | null;
+  stateAfter1000ms: string | null;
+  lastStateChange: string | null;
+  unlockSourceStarted: string | null;
+  unlockSourceEnded: string | null;
+  queuedFirstNote: boolean;
+  queuedFirstNoteDispatched: boolean;
+  queuedFirstNoteCancelled: boolean;
+  lastPointerEventSequence: string | null;
+  lastNoteDurationMs: number | null;
   activeVoices: number;
   pendingNotes: number;
   masterGain: number;
   lastNoteOn: string | null;
   lastNoteOff: string | null;
   lastInterruption: string | null;
+  lastRecoverySuccess: string | null;
   lastError: string | null;
   visibility: string;
 }
@@ -95,11 +116,31 @@ class SynthEngineImpl {
   // --- diagnostics ---
   private contextsCreated = 0;
   private startupAttempts = 0;
+  private recoveryAttempts = 0;
+  private audioGraphGeneration = 0;
   private lastNoteOn: string | null = null;
   private lastNoteOff: string | null = null;
   private lastInterruption: string | null = null;
+  private lastRecoverySuccess: string | null = null;
   private lastError: string | null = null;
+  private lastRecoveryTrigger: string | null = null;
+  private lastStateChange: string | null = null;
+  private stateBeforeResume: string | null = null;
+  private resumePromiseResolved = false;
+  private resumePromiseRejected = false;
+  private stateImmediatelyAfterResume: string | null = null;
+  private stateAfter50ms: string | null = null;
+  private stateAfter250ms: string | null = null;
+  private stateAfter1000ms: string | null = null;
+  private unlockSourceStarted: string | null = null;
+  private unlockSourceEnded: string | null = null;
+  private queuedFirstNote = false;
+  private queuedFirstNoteDispatched = false;
+  private queuedFirstNoteCancelled = false;
+  private lastPointerEventSequence: string | null = null;
+  private lastNoteDurationMs: number | null = null;
   private recoveryInstalled = false;
+  private readonly pressTimes = new Map<VoiceHandle, number>();
 
   private nextHandle: VoiceHandle = 1;
   private readonly notes = new Map<VoiceHandle, NoteRecord>();
@@ -155,6 +196,7 @@ class SynthEngineImpl {
     if (!this.graph) {
       this.graph = getAudioGraph();
       this.contextsCreated++;
+      this.audioGraphGeneration++;
       this.graphConnected = true;
       this.installStateListener();
       this.initLfos();
@@ -167,14 +209,15 @@ class SynthEngineImpl {
     if (!this.graph) return;
     const ctx = this.graph.ctx as AudioContext & { onstatechange?: unknown };
     this.graph.ctx.addEventListener("statechange", () => this.reflectContextState());
-    // iOS Safari raises "interrupted" via statechange too.
+    // iOS Safari raises "interrupted"/"running" via statechange too.
     ctx.onstatechange = () => this.reflectContextState();
   }
 
   /**
-   * Play a one-sample silent buffer synchronously. On iOS Safari, calling
-   * resume() alone frequently leaves the hardware output muted until a
-   * source is *started within the user gesture* — this is the unlock.
+   * Create + connect + START a one-sample silent buffer, synchronously. On
+   * iOS Safari, resume() alone frequently leaves the hardware output muted
+   * (and a context stuck "interrupted") until a source is *started within the
+   * user gesture* — this is the unlock. Must run before any deferred work.
    */
   private silentUnlock() {
     if (!this.graph) return;
@@ -184,6 +227,10 @@ class SynthEngineImpl {
       const src = ctx.createBufferSource();
       src.buffer = buf;
       src.connect(ctx.destination);
+      src.onended = () => {
+        this.unlockSourceEnded = iso();
+      };
+      this.unlockSourceStarted = iso();
       src.start(0);
       src.stop(ctx.currentTime + 0.02);
     } catch {
@@ -192,65 +239,125 @@ class SynthEngineImpl {
   }
 
   /**
-   * Ensure the context exists and is running. Idempotent: concurrent calls
-   * share one startup promise, never creating a second engine or context.
-   * Must be reachable from a user gesture (that is where it is called from).
+   * SYNCHRONOUS recovery — MUST be invoked from a direct user gesture
+   * (keyboard pointerdown, status tap). Inside this call, with nothing
+   * deferred before it, we create+connect+START the silent unlock source and
+   * then call resume(). Only diagnostics/dispatch happen later. Idempotent:
+   * never creates a second AudioContext or engine.
    */
-  private ensureRunning(): Promise<void> {
+  recoverFromGesture(trigger = "gesture"): void {
+    this.lastRecoveryTrigger = trigger;
     if (this.isRunning()) {
       this.markReady();
-      return Promise.resolve();
+      return;
     }
-    if (this.startupPromise) return this.startupPromise;
-
-    this.startupAttempts++;
-    this.setStatus(this.graph ? "recovering" : "starting");
-
-    // Synchronous part runs inside the gesture: create + unlock + kick resume.
-    const graph = this.ensureGraph();
+    const graph = this.ensureGraph(); // synchronous graph build
+    // --- unlock source FIRST, synchronously, before anything deferred ---
     this.silentUnlock();
-    const resumeP = graph.ctx.state === "running" ? Promise.resolve() : graph.ctx.resume();
+    this.stateBeforeResume = graph.ctx.state;
+    this.recoveryAttempts++;
+    this.startupAttempts++;
+    this.setStatus(this.recoveryAttempts > 1 ? "recovering" : "starting");
+    if (this.startupPromise) return; // a resume is already in flight — share it
 
-    this.startupPromise = resumeP
+    this.resumePromiseResolved = false;
+    this.resumePromiseRejected = false;
+    const p = graph.ctx.state === "running" ? Promise.resolve() : graph.ctx.resume();
+    this.startupPromise = p
       .then(() => {
-        // A second silent unlock after resume settles the iOS output path.
+        this.resumePromiseResolved = true;
+        this.stateImmediatelyAfterResume = graph.ctx.state;
+        // Second unlock settles the iOS output path after resume resolves.
         this.silentUnlock();
-        this.reflectContextState();
+        if (this.isRunning()) {
+          this.markReady(); // → dispatch the preserved note, mark recovery success
+        } else {
+          // resume() resolved but the context is still not running (iOS keeps
+          // it "interrupted"): stay on RECONNECT and wait for the NEXT direct
+          // gesture. Do NOT start an automatic background resume loop.
+          this.setStatus("recovering");
+        }
+        this.sampleResumeStates(graph.ctx);
       })
       .catch((e) => {
+        this.resumePromiseRejected = true;
         this.lastError = `resume: ${errMsg(e)}`;
-        console.error("[TX-8P] AudioContext resume failed", e);
-        this.setStatus("failed");
+        this.reflectContextState();
       })
       .finally(() => {
         this.startupPromise = undefined;
       });
-    return this.startupPromise;
   }
 
   /**
-   * Public unlock for the first user gesture anywhere in the app. Safe to
-   * call on every gesture — it no-ops once running.
+   * Diagnostic-only state sampling after a resume. Never calls resume(), so
+   * this is not a retry loop; it only READS ctx.state and, as a safety net,
+   * dispatches a still-held preserved note if iOS flips to running late
+   * without firing statechange.
    */
+  private sampleResumeStates(ctx: AudioContext) {
+    setTimeout(() => {
+      this.stateAfter50ms = ctx.state;
+    }, 50);
+    setTimeout(() => {
+      this.stateAfter250ms = ctx.state;
+      if (this.isRunning()) this.markReady();
+    }, 250);
+    setTimeout(() => {
+      this.stateAfter1000ms = ctx.state;
+      if (this.isRunning()) this.markReady();
+    }, 1000);
+  }
+
+  private ensureRunning(): Promise<void> {
+    this.recoverFromGesture(this.lastRecoveryTrigger ?? "auto");
+    return this.startupPromise ?? Promise.resolve();
+  }
+
+  /** Public unlock for a gesture anywhere (status pill / settings). */
   unlock(): Promise<void> {
     return this.ensureRunning();
   }
 
   private markReady() {
-    if (this.isRunning() && this.graphConnected) this.setStatus("ready");
+    if (this.isRunning() && this.graphConnected) {
+      const was = this.status;
+      this.setStatus("ready");
+      if (was !== "ready") this.lastRecoverySuccess = iso();
+      this.flushPending();
+    }
+  }
+
+  /** Dispatch every still-held preserved note the instant the context runs. */
+  private flushPending() {
+    if (!this.isRunning()) return;
+    for (const req of Array.from(this.pending.values())) {
+      this.pending.delete(req.handle);
+      if (req.cancelled) continue;
+      this.queuedFirstNoteDispatched = true;
+      this.triggerNote({
+        handle: req.handle,
+        midi: req.midi,
+        velocity: req.velocity,
+        source: req.source,
+        sourceKey: req.sourceKey,
+        voices: [],
+        pedalHeld: false,
+      });
+    }
   }
 
   private reflectContextState() {
     if (!this.graph) return;
+    this.lastStateChange = iso();
     const s = this.graph.ctx.state as string;
     if (s === "running") {
-      this.markReady();
+      this.markReady(); // dispatches the preserved note on the running transition
     } else if (s === "closed") {
       this.setStatus("failed");
     } else if (s === "interrupted") {
-      // iOS interruption (call, Siri, route change) — needs a gesture to recover.
-      this.lastInterruption = new Date().toISOString();
-      this.setStatus("suspended");
+      this.lastInterruption = iso();
+      this.setStatus(this.startupPromise ? "recovering" : "suspended");
     } else {
       // "suspended"
       this.setStatus(this.startupPromise ? "recovering" : "suspended");
@@ -258,35 +365,44 @@ class SynthEngineImpl {
   }
 
   /**
-   * Attempt recovery without a fresh note (visibility restore / pageshow).
-   * On iOS a resume() outside a gesture may be rejected; that is fine — the
-   * next user gesture will unlock. We surface RECONNECT so the UI prompts.
+   * Visibility/pageshow/focus restore: READ-ONLY re-check (no resume() outside
+   * a gesture — iOS would reject it). If already running, promote to READY;
+   * otherwise surface RECONNECT and wait for the next direct user gesture.
    */
-  attemptRecovery() {
-    if (!this.graph || this.isRunning()) {
-      this.markReady();
-      return;
-    }
-    void this.ensureRunning();
+  attemptRecovery(trigger = "visibility") {
+    if (!this.graph) return;
+    this.lastRecoveryTrigger = trigger;
+    this.reflectContextState();
   }
 
-  /** Install document-level gesture + visibility recovery (client-only, once). */
+  /** Report the pointer/touch event sequence for a note (diagnostics). */
+  reportPointerSequence(seq: string) {
+    this.lastPointerEventSequence = seq;
+  }
+
+  /**
+   * Document-level recovery as a SECONDARY safety net. The on-screen keyboard
+   * calls recoverFromGesture directly in its own handler (primary path); this
+   * covers taps outside the keyboard and non-key gestures.
+   */
   installRecovery() {
     if (this.recoveryInstalled || typeof window === "undefined") return;
     this.recoveryInstalled = true;
-    const gesture = () => {
-      if (!this.isRunning()) void this.ensureRunning();
+    const gesture = (label: string) => () => {
+      if (!this.isRunning()) this.recoverFromGesture(label);
     };
-    // capture so we run before per-key handlers; passive so we never block input
-    window.addEventListener("pointerdown", gesture, { capture: true, passive: true });
-    window.addEventListener("touchend", gesture, { capture: true, passive: true });
-    window.addEventListener("keydown", gesture, { capture: true });
+    window.addEventListener("pointerdown", gesture("doc-pointer"), {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("touchend", gesture("doc-touch"), { capture: true, passive: true });
+    window.addEventListener("keydown", gesture("doc-key"), { capture: true });
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) this.attemptRecovery();
+      if (!document.hidden) this.attemptRecovery("visibilitychange");
       else if (this.graph && !this.isRunning()) this.reflectContextState();
     });
-    window.addEventListener("pageshow", () => this.attemptRecovery());
-    window.addEventListener("focus", () => this.attemptRecovery());
+    window.addEventListener("pageshow", () => this.attemptRecovery("pageshow"));
+    window.addEventListener("focus", () => this.attemptRecovery("focus"));
   }
 
   getContext(): AudioContext | undefined {
@@ -301,22 +417,44 @@ class SynthEngineImpl {
 
   getDiagnostics(): AudioDiagnostics {
     const ctx = this.graph?.ctx;
+    const rawState = ctx?.state ?? "none";
     return {
       status: this.status,
-      contextState: ctx?.state ?? "none",
+      lifecycleState: this.status,
+      contextState: rawState,
+      rawContextState: rawState,
       running: this.isRunning(),
       destinationConnected: this.graphConnected,
+      audioGraphGeneration: this.audioGraphGeneration,
       sampleRate: ctx?.sampleRate ?? 0,
       baseLatency: ctx?.baseLatency ?? null,
       outputLatency: (ctx as AudioContext & { outputLatency?: number })?.outputLatency ?? null,
       contextsCreated: this.contextsCreated,
       startupAttempts: this.startupAttempts,
+      recoveryAttempts: this.recoveryAttempts,
+      lastRecoveryTrigger: this.lastRecoveryTrigger,
+      stateBeforeResume: this.stateBeforeResume,
+      resumePromiseResolved: this.resumePromiseResolved,
+      resumePromiseRejected: this.resumePromiseRejected,
+      stateImmediatelyAfterResume: this.stateImmediatelyAfterResume,
+      stateAfter50ms: this.stateAfter50ms,
+      stateAfter250ms: this.stateAfter250ms,
+      stateAfter1000ms: this.stateAfter1000ms,
+      lastStateChange: this.lastStateChange,
+      unlockSourceStarted: this.unlockSourceStarted,
+      unlockSourceEnded: this.unlockSourceEnded,
+      queuedFirstNote: this.queuedFirstNote,
+      queuedFirstNoteDispatched: this.queuedFirstNoteDispatched,
+      queuedFirstNoteCancelled: this.queuedFirstNoteCancelled,
+      lastPointerEventSequence: this.lastPointerEventSequence,
+      lastNoteDurationMs: this.lastNoteDurationMs,
       activeVoices: this.getActiveVoiceCount(),
       pendingNotes: this.pending.size,
       masterGain: this.graph?.masterGain.gain.value ?? 0,
       lastNoteOn: this.lastNoteOn,
       lastNoteOff: this.lastNoteOff,
       lastInterruption: this.lastInterruption,
+      lastRecoverySuccess: this.lastRecoverySuccess,
       lastError: this.lastError,
       visibility: typeof document !== "undefined" ? document.visibilityState : "unknown",
     };
@@ -477,7 +615,8 @@ class SynthEngineImpl {
   // ---------------- note lifecycle ----------------
   pressNote(source: NoteSource, sourceKey: string, midi: number, velocity = 0.8): VoiceHandle {
     const handle = this.nextHandle++;
-    this.lastNoteOn = `${midi} (${source}) @ ${new Date().toISOString()}`;
+    this.pressTimes.set(handle, nowMs());
+    this.lastNoteOn = `${midi} (${source}) @ ${iso()}`;
 
     // Trust the ACTUAL context state, never a cached "ready". This is what
     // fixes the "READY but silent" case after an iOS interruption.
@@ -487,35 +626,32 @@ class SynthEngineImpl {
       return handle;
     }
 
-    // Not running yet — preserve the note and dispatch it the instant the
-    // context is unlocked, unless it was released in the meantime.
+    // Not running yet — PRESERVE the note. Recovery is kicked here too (belt &
+    // suspenders; the keyboard also calls recoverFromGesture first). The note
+    // is dispatched by flushPending() the instant the context transitions to
+    // running — NOT when resume() resolves (iOS can resolve still-interrupted).
+    this.queuedFirstNote = true;
+    this.queuedFirstNoteDispatched = false;
+    this.queuedFirstNoteCancelled = false;
     this.pending.set(handle, { handle, midi, velocity, source, sourceKey, cancelled: false });
-    void this.ensureRunning()
-      .then(() => {
-        const req = this.pending.get(handle);
-        if (!req) return;
-        this.pending.delete(handle);
-        if (req.cancelled || !this.isRunning()) return;
-        this.triggerNote({
-          handle: req.handle,
-          midi: req.midi,
-          velocity: req.velocity,
-          source: req.source,
-          sourceKey: req.sourceKey,
-          voices: [],
-          pedalHeld: false,
-        });
-      })
-      .catch(() => this.pending.delete(handle));
+    if (source === "screen") this.recoverFromGesture("note");
+    else void this.ensureRunning();
     return handle;
   }
 
   releaseNote(handle: VoiceHandle) {
-    this.lastNoteOff = `handle ${handle} @ ${new Date().toISOString()}`;
+    const start = this.pressTimes.get(handle);
+    if (start != null) {
+      this.lastNoteDurationMs = Math.round(nowMs() - start);
+      this.pressTimes.delete(handle);
+    }
+    this.lastNoteOff = `handle ${handle} @ ${iso()}`;
     const req = this.pending.get(handle);
     if (req) {
+      // Released before recovery completed: cancel cleanly — no late/stuck note.
       req.cancelled = true;
       this.pending.delete(handle);
+      this.queuedFirstNoteCancelled = true;
       return;
     }
     const rec = this.notes.get(handle);
@@ -730,6 +866,9 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
+
+const iso = () => new Date().toISOString();
+const nowMs = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 function divToHz(tempo: number, divIdx: number): number {
   const beat = 60 / tempo;

@@ -55,8 +55,10 @@ function buildKeys(startOctave: number, octaveCount: number): Key[] {
  * voice that was triggered, even for repeated identical notes or
  * overlapping touches.
  *
- * Cleanup surfaces:
- *  - pointerup / pointercancel / pointerleave  → release that pointer
+ * Cleanup surfaces (deliberately NOT pointerleave — with pointer capture a
+ * tiny finger movement fires pointerleave and would cut the note at ~80ms,
+ * the premature note-off we're fixing):
+ *  - pointerup / pointercancel                  → release that pointer
  *  - `lostpointercapture`                       → release that pointer
  *  - window `blur` / `visibilitychange` (hidden)→ release everything
  *  - engine `panic()` (via top bar) will also clear anything we miss
@@ -76,8 +78,17 @@ export function Keyboard({
   const octaveRef = useRef(0);
   octaveRef.current = usePerfStore((s) => s.octave);
 
+  const seqRef = useRef<string[]>([]);
+  const logSeq = useCallback((name: string, pointerId: number) => {
+    const arr = seqRef.current;
+    arr.push(`${name}#${pointerId}`);
+    if (arr.length > 8) arr.shift();
+    getSynthEngine().reportPointerSequence(arr.join(" → "));
+  }, []);
+
   const press = useCallback((pointerId: number, midi: number) => {
-    // Guard against duplicate presses from the same pointer.
+    // Guard against duplicate presses from the same pointer — one physical
+    // touch owns exactly one note.
     if (ownership.current.has(pointerId)) return;
     // Apply the current performance octave; the exact sounding note is
     // captured in the handle so releases survive octave changes.
@@ -151,15 +162,28 @@ export function Keyboard({
               aria-label={`${k.note}${k.octave}`}
               aria-pressed={active}
               onPointerDown={(e) => {
+                // Recover audio FIRST, synchronously in this gesture, before
+                // any note processing — this is the iOS interrupted unlock.
+                getSynthEngine().recoverFromGesture("keyboard");
                 (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                logSeq("down", e.pointerId);
                 press(e.pointerId, k.midi);
               }}
-              onPointerUp={(e) => release(e.pointerId)}
-              onPointerLeave={(e) => release(e.pointerId)}
-              onPointerCancel={(e) => release(e.pointerId)}
-              onLostPointerCapture={(e) => release(e.pointerId)}
+              onPointerUp={(e) => {
+                logSeq("up", e.pointerId);
+                release(e.pointerId);
+              }}
+              onPointerCancel={(e) => {
+                logSeq("cancel", e.pointerId);
+                release(e.pointerId);
+              }}
+              onLostPointerCapture={(e) => {
+                logSeq("lostcapture", e.pointerId);
+                release(e.pointerId);
+              }}
               className="relative flex-1"
               style={{
+                touchAction: "none",
                 background: active
                   ? "linear-gradient(180deg, var(--key-white-shadow) 0%, var(--key-white) 90%)"
                   : "linear-gradient(180deg, var(--key-white) 0%, var(--key-white) 88%, var(--key-white-shadow) 100%)",
@@ -204,15 +228,26 @@ export function Keyboard({
                 aria-label={`${k.note}${k.octave}`}
                 aria-pressed={active}
                 onPointerDown={(e) => {
+                  getSynthEngine().recoverFromGesture("keyboard");
                   (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                  logSeq("down", e.pointerId);
                   press(e.pointerId, k.midi);
                 }}
-                onPointerUp={(e) => release(e.pointerId)}
-                onPointerLeave={(e) => release(e.pointerId)}
-                onPointerCancel={(e) => release(e.pointerId)}
-                onLostPointerCapture={(e) => release(e.pointerId)}
+                onPointerUp={(e) => {
+                  logSeq("up", e.pointerId);
+                  release(e.pointerId);
+                }}
+                onPointerCancel={(e) => {
+                  logSeq("cancel", e.pointerId);
+                  release(e.pointerId);
+                }}
+                onLostPointerCapture={(e) => {
+                  logSeq("lostcapture", e.pointerId);
+                  release(e.pointerId);
+                }}
                 className="pointer-events-auto absolute"
                 style={{
+                  touchAction: "none",
                   left: `${leftPct}%`,
                   top: 0,
                   width: `${whiteWidthPct * 0.6}%`,

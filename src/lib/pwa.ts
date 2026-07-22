@@ -46,6 +46,9 @@ export function registerPwa() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
   // Only register the SW in production builds.
   if (!import.meta.env.PROD) return;
+  // Temporary preview builds set this to guarantee the preview can never load
+  // or install a cached (stale/production) app shell during audio testing.
+  if (import.meta.env.VITE_TX8P_DISABLE_SW === "1") return;
 
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
