@@ -85,7 +85,7 @@ function Index() {
         {cls === "mobile-portrait" && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <div className="flex min-w-0 flex-col leading-tight">
+              <div className="flex shrink-0 flex-col leading-tight">
                 <span
                   className="font-sans text-[9px] font-semibold tracking-[0.3em]"
                   style={{ color: "var(--engraving-chassis-dim)" }}
@@ -93,10 +93,10 @@ function Index() {
                   TXPPS
                 </span>
                 <span
-                  className="font-sans font-semibold"
+                  className="whitespace-nowrap font-sans font-semibold"
                   style={{
                     color: "var(--engraving-chassis)",
-                    fontSize: 20,
+                    fontSize: 19,
                     letterSpacing: "0.02em",
                     lineHeight: 1,
                   }}
@@ -104,13 +104,13 @@ function Index() {
                   TX-8P
                 </span>
               </div>
-              <div className="ml-1 flex-1">
-                <OutputMeter width={104} height={18} />
+              <OutputMeter width={56} height={16} />
+              <div className="ml-auto flex items-center gap-1.5">
+                <TopActions />
               </div>
-              <TopActions />
             </div>
-            <div className="flex items-center gap-2">
-              <PresetLCD />
+            <div className="flex items-center gap-1.5">
+              <PresetLCD compact />
               <div className="ml-auto">
                 <PresetNav />
               </div>
@@ -150,13 +150,16 @@ function Index() {
         <TabBar />
       </div>
 
-      {/* ============ REGION 2: SCROLLABLE SYNTH EDITOR ============ */}
+      {/* ============ REGION 2: SCROLLABLE SYNTH EDITOR ============
+          The editor card stretches to fill the region so the space between it
+          and the docked keyboard reads as intentional dark panel, not a bare
+          gray gap. */}
       <div
         data-region="editor"
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 md:px-6"
+        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain px-3 py-3 md:px-6"
       >
         <Editor />
-        <div className="mt-2 flex items-center justify-between px-1">
+        <div className="flex items-center justify-between px-1">
           <EngravedLabel variant="chassis-dim">TXPPS · TX-8P · Hybrid Poly Synth</EngravedLabel>
           <EngravedLabel variant="chassis-dim">Made in Software · 8P</EngravedLabel>
         </div>

@@ -45,7 +45,7 @@ export function Editor() {
   return (
     <section
       aria-label={`${tab} editor`}
-      className="program-strip flex flex-col gap-3 px-3 py-3 md:px-5 md:py-4"
+      className="program-strip flex flex-1 flex-col gap-3 px-3 py-3 md:px-5 md:py-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <EngravedLabel variant="strip" className="text-[10px]">

@@ -60,7 +60,11 @@ export function getAudioGraph(): AudioGraph {
   const ctx = new Ctor({ latencyHint: "interactive" });
 
   const voiceBus = ctx.createGain();
-  voiceBus.gain.value = 0.85;
+  // Headroom for polyphony: an 8-note chord of a fat two-oscillator preset
+  // sums well past unity at the voice bus. Attenuating here keeps chords near
+  // 0 dBFS so the safety limiter only lightly catches peaks instead of
+  // compressing constantly (make-up is applied at masterGain).
+  voiceBus.gain.value = 0.68;
 
   // ---- effects rack ----
   const drive = createDrive(ctx);
@@ -71,7 +75,7 @@ export function getAudioGraph(): AudioGraph {
   const limiter = createLimiter(ctx);
 
   const masterGain = ctx.createGain();
-  masterGain.gain.value = 0.8;
+  masterGain.gain.value = 0.9; // make-up for the voice-bus headroom above
 
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;

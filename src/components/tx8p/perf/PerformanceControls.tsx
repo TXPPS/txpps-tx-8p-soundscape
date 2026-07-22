@@ -116,12 +116,12 @@ export function OctaveControls({
   };
   const down = (
     <ProgramButton color="cream" onClick={() => step(-1)} ariaLabel="Octave down">
-      OCT −
+      {compact ? "−" : "OCT −"}
     </ProgramButton>
   );
   const up = (
     <ProgramButton color="cream" onClick={() => step(1)} ariaLabel="Octave up">
-      OCT +
+      {compact ? "+" : "OCT +"}
     </ProgramButton>
   );
   if (layout === "stack") {

@@ -439,6 +439,77 @@ async function main() {
     `c0=${rebuild.c0} c1=${rebuild.c1} gen=${rebuild.gen}`,
   );
 
+  // 8) sustain pedal regression
+  const sus = await evaluate(`(async()=>{
+    const e=window.__t.eng; e.panic(); e.loadParams({}); await new Promise(r=>setTimeout(r,120));
+    const h=e.pressNote('screen','s',60,0.9); await new Promise(r=>setTimeout(r,80));
+    e.setSustain(true); e.releaseNote(h); await new Promise(r=>setTimeout(r,150));
+    const held=e.getActiveVoiceCount();
+    e.setSustain(false); await new Promise(r=>setTimeout(r,500));
+    const after=e.getActiveVoiceCount();
+    return {held, after};
+  })()`);
+  assert("sustain holds note after key release", sus.held === 1, `held=${sus.held}`);
+  assert("sustain-off releases the held note", sus.after === 0, `after=${sus.after}`);
+
+  // 9) gain staging / clipping — a HOT two-osc + drive 8-note chord must not
+  // clip the destination yet stay audible, and the pre-FX bus keeps headroom.
+  // Uses the actual "Ana Brass" params (two full saws + drive) — the patch
+  // that was heavily distorting — so this is a realistic regression guard.
+  const ANA_BRASS = {
+    "osc1.table": 2,
+    "osc1.pos": 0.4,
+    "osc1.level": 0.9,
+    "osc2.shape": 2,
+    "osc2.fine": -7,
+    "osc2.level": 0.85,
+    "mixer.osc2": 0.85,
+    "filter.mode": 0,
+    "filter.cutoff": 1800,
+    "filter.resonance": 0.2,
+    "filter.envAmt": 0.6,
+    "filter.envVel": 0.5,
+    "amp.attack": 60,
+    "amp.decay": 500,
+    "amp.sustain": 0.8,
+    "amp.release": 250,
+    "modenv.attack": 40,
+    "modenv.decay": 400,
+    "modenv.sustain": 0.3,
+    "matrix.s1.src": 3,
+    "matrix.s1.dst": 7,
+    "matrix.s1.amt": 0.4,
+    "matrix.s1.on": 1,
+    "drive.on": 1,
+    "drive.amount": 0.3,
+    "chorus.on": 1,
+    "chorus.mode": 0,
+  };
+  const clip = await evaluate(`(async()=>{
+    const e=window.__t.eng, g=window.__tx8p.getGraph();
+    e.panic();
+    e.loadParams(${JSON.stringify(ANA_BRASS)});
+    await new Promise(r=>setTimeout(r,160));
+    const tap=g.ctx.createAnalyser(); tap.fftSize=4096; g.voiceBus.connect(tap);
+    const peak=(an)=>{const b=new Float32Array(an.fftSize);an.getFloatTimeDomainData(b);let p=0;for(const x of b)p=Math.max(p,Math.abs(x));return p;};
+    const hs=[60,63,67,70,72,75,79,82].map((m,i)=>e.pressNote('screen','x'+i,m,0.95));
+    let vpk=0,mpk=0; for(let k=0;k<28;k++){await new Promise(r=>setTimeout(r,20)); vpk=Math.max(vpk,peak(tap)); mpk=Math.max(mpk,peak(g.analyser));}
+    for(const h of hs) e.releaseNote(h); await new Promise(r=>setTimeout(r,200));
+    e.loadParams({});
+    return {vpk:+vpk.toFixed(3), mpk:+mpk.toFixed(3)};
+  })()`);
+  assert(
+    "Ana Brass 8-note chord does not clip destination",
+    clip.mpk < 0.99,
+    `masterPeak=${clip.mpk}`,
+  );
+  assert("Ana Brass 8-note chord stays audible", clip.mpk > 0.4, `masterPeak=${clip.mpk}`);
+  assert(
+    "Ana Brass voice bus keeps polyphony headroom (~unity, no constant limiting)",
+    clip.vpk < 1.15,
+    `voiceBusPeak=${clip.vpk}`,
+  );
+
   const passed = results.filter((r) => r.ok).length;
   const total = results.length;
   log(`\n${passed}/${total} assertions passed`);

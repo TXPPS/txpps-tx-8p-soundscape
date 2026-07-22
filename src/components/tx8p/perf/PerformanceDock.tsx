@@ -54,7 +54,7 @@ function PortraitDock() {
           <SustainControl />
         </div>
       </div>
-      <div style={{ height: "min(26vh, 168px)", minHeight: 116 }}>
+      <div style={{ height: "min(32vh, 224px)", minHeight: 132 }}>
         <PianoKeyboard startOctave={4} octaveCount={2} />
       </div>
     </div>

@@ -161,11 +161,39 @@ async function main() {
         // pick the first VISIBLE meter (the hidden desktop/mobile variant has width 0)
         const meters = [...document.querySelectorAll('[aria-label="Output level meter"]')].map(rect).filter(Boolean);
         const visibleMeter = meters.find((m) => m.w > 10) || meters[0] || null;
+        // Keyboard layout metrics (TX27 parity): white keys are even-width and
+        // fill the dock; black keys are narrower and top-aligned.
+        const kbdEl = document.querySelector('[aria-label="Playable keyboard"]');
+        let keyMetrics = null;
+        if (kbdEl) {
+          const kb = kbdEl.getBoundingClientRect();
+          const keys = [...kbdEl.querySelectorAll('button[aria-label]')];
+          const whites = keys.filter((b) => /^[A-G]\\d+$/.test(b.getAttribute('aria-label')));
+          const blacks = keys.filter((b) => /#/.test(b.getAttribute('aria-label')));
+          const ww = whites.map((b) => b.getBoundingClientRect().width);
+          const bw = blacks.map((b) => b.getBoundingClientRect().width);
+          const bTops = blacks.map((b) => b.getBoundingClientRect().top - kb.top);
+          const bHeights = blacks.map((b) => b.getBoundingClientRect().height);
+          keyMetrics = {
+            whiteCount: whites.length,
+            blackCount: blacks.length,
+            whiteWidthSpread: ww.length ? Math.max(...ww) - Math.min(...ww) : null,
+            whiteWidthAvg: ww.length ? ww.reduce((a, b) => a + b, 0) / ww.length : null,
+            blackWidthAvg: bw.length ? bw.reduce((a, b) => a + b, 0) / bw.length : null,
+            blackTopMax: bTops.length ? Math.max(...bTops) : null,
+            blackHeightRatio: bHeights.length ? Math.max(...bHeights) / kb.height : null,
+          };
+        }
+        // Preset navigation must stay fully on-screen (header must not clip
+        // the Library button on a phone).
+        const libEl = [...document.querySelectorAll('button')].find((b) => /library/i.test(b.getAttribute('aria-label') || ''));
         return JSON.stringify({
           dock: one('[aria-label="Performance dock"]'),
           keyboard: one('[aria-label="Playable keyboard"]'),
           meter: visibleMeter,
           editor: one('[data-region="editor"]'),
+          keyMetrics,
+          library: rect(libEl),
           vw: window.innerWidth, vh: window.innerHeight,
           scrollW: document.documentElement.scrollWidth,
         });
@@ -198,6 +226,50 @@ async function main() {
         `dockTop=${m.dock.top.toFixed(0)} editorBottom=${m.editor.bottom.toFixed(0)}`,
       );
     }
+
+    // ---- Keyboard layout measurements (TX27 parity) ----
+    const km = m.keyMetrics;
+    assert(
+      `${label}: keyboard exposes white + black keys`,
+      km && km.whiteCount >= 8 && km.blackCount >= 5,
+      km && `white=${km.whiteCount} black=${km.blackCount}`,
+    );
+    if (km) {
+      // White keys must be even width — the JX/TX keybed has no ragged spacing.
+      assert(
+        `${label}: white keys are even width`,
+        km.whiteWidthSpread != null && km.whiteWidthSpread <= 1.5,
+        `spread=${km.whiteWidthSpread?.toFixed(2)}px avg=${km.whiteWidthAvg?.toFixed(1)}px`,
+      );
+      // Black keys sit ~55–70% of a white key's width (classic keybed proportion).
+      const ratio = km.whiteWidthAvg ? km.blackWidthAvg / km.whiteWidthAvg : null;
+      assert(
+        `${label}: black keys narrower than white (keybed proportion)`,
+        ratio != null && ratio > 0.4 && ratio < 0.8,
+        `black/white=${ratio?.toFixed(2)}`,
+      );
+      // Black keys are top-aligned and roughly 2/3 height.
+      assert(
+        `${label}: black keys top-aligned + shorter`,
+        km.blackTopMax != null &&
+          km.blackTopMax <= 2 &&
+          km.blackHeightRatio > 0.5 &&
+          km.blackHeightRatio < 0.8,
+        `top=${km.blackTopMax?.toFixed(1)}px hRatio=${km.blackHeightRatio?.toFixed(2)}`,
+      );
+    }
+    // Keyboard fills the dock width (a wide, playable keybed — not a strip).
+    assert(
+      `${label}: keyboard fills dock width`,
+      m.keyboard && m.dock && m.keyboard.w >= m.dock.w * 0.55,
+      m.keyboard && m.dock && `kbdW=${m.keyboard.w.toFixed(0)} dockW=${m.dock.w.toFixed(0)}`,
+    );
+    // Preset navigation (Prev/Next/Library) stays fully within the viewport.
+    assert(
+      `${label}: preset nav Library button not clipped`,
+      m.library && m.library.right <= m.vw + 1 && m.library.left >= -1,
+      m.library && `libRight=${m.library.right.toFixed(0)} vw=${m.vw}`,
+    );
   };
 
   await measure(393, 852, "portrait"); // iPhone 15 Pro portrait

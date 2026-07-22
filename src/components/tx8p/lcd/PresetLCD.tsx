@@ -55,7 +55,7 @@ function useLines(mode: LcdMode): [string, string] {
  * Deliberately small and restrained — an integrated hardware
  * display, not a neon centerpiece.
  */
-export function PresetLCD() {
+export function PresetLCD({ compact = false }: { compact?: boolean } = {}) {
   const mode = useUiStore((s) => s.lcdMode);
   const setLcd = useUiStore((s) => s.setLcdMode);
   const [line1, line2] = useLines(mode);
@@ -72,10 +72,16 @@ export function PresetLCD() {
       className="relative overflow-hidden select-none"
       style={{
         borderRadius: 3,
-        padding: "6px 10px",
+        // Portrait needs a tighter footprint so the preset-nav row (Prev/Next/
+        // Library) fits within a phone viewport. The compact variant keeps all
+        // 20 display columns readable at a smaller advance instead of clipping.
+        padding: compact ? "5px 8px" : "6px 10px",
         background: "linear-gradient(180deg, var(--lcd-bg-top) 0%, var(--lcd-bg) 100%)",
         boxShadow: "var(--shadow-lcd-inset), 0 1px 0 oklch(1 0 0 / 0.35), 0 0 10px var(--lcd-glow)",
-        minWidth: "22ch",
+        // px (not ch): the `ch` unit resolves against this div's inherited
+        // 16px font, not the 10px display text, so `ch` would over-reserve
+        // width. A fixed px min holds all 20 columns at the compact size.
+        minWidth: compact ? 172 : "22ch",
       }}
       role="status"
       aria-live="polite"
@@ -101,7 +107,9 @@ export function PresetLCD() {
         }}
       />
       <pre
-        className="relative m-0 whitespace-pre font-mono text-[11px] leading-[1.3] tracking-[0.16em]"
+        className={`relative m-0 whitespace-pre font-mono leading-[1.3] ${
+          compact ? "text-[10px] tracking-[0.03em]" : "text-[11px] tracking-[0.16em]"
+        }`}
         style={{
           color: "var(--lcd-amber)",
           textShadow: "0 0 4px var(--lcd-glow)",

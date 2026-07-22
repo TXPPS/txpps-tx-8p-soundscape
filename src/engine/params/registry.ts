@@ -1271,7 +1271,7 @@ def({
   label: "Master Volume",
   min: 0,
   max: 1,
-  default: 0.8,
+  default: 0.9,
   curve: "exp",
   smoothingMs: 30,
   midiEligible: true,

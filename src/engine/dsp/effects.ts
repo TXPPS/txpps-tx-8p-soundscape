@@ -50,13 +50,18 @@ export function createDrive(ctx: BaseAudioContext): Effect {
   let amount = 0.25;
   let mix = 1;
 
+  // Smooth tanh soft-saturation. `k` stays small at low `amount` so drive is
+  // genuinely subtle there (the old `1 + a*60` was near hard-clipping even at
+  // 0.3, which grossly distorted polyphonic material). Normalised so the curve
+  // passes through ±1.
   const buildCurve = (a: number) => {
     const n = 1024;
     const curve = new Float32Array(n);
-    const k = 1 + a * 60;
+    const k = 0.5 + a * 4;
+    const norm = Math.tanh(k);
     for (let i = 0; i < n; i++) {
       const x = (i / (n - 1)) * 2 - 1;
-      curve[i] = ((1 + k) * x) / (1 + k * Math.abs(x));
+      curve[i] = Math.tanh(k * x) / norm;
     }
     return curve;
   };
@@ -65,7 +70,7 @@ export function createDrive(ctx: BaseAudioContext): Effect {
     ramp(wet.gain, m, ctx);
     ramp(dry.gain, 1 - m, ctx);
     // output compensation: pull back as drive rises
-    ramp(post.gain, bypassed ? 1 : 1 / (1 + amount * 1.5), ctx);
+    ramp(post.gain, bypassed ? 1 : 1 / (1 + amount * 0.7), ctx);
   };
   shaper.curve = buildCurve(amount);
   applyMix();
@@ -82,7 +87,7 @@ export function createDrive(ctx: BaseAudioContext): Effect {
         case "drive.amount":
           amount = v;
           shaper.curve = buildCurve(v);
-          ramp(pre.gain, 1 + v * 3, ctx);
+          ramp(pre.gain, 1 + v * 1.2, ctx);
           applyMix();
           break;
         case "drive.tone":
