@@ -1,0 +1,17 @@
+{
+  "name": "TXPPS TX-8P",
+  "short_name": "TX-8P",
+  "description": "Eight-voice hybrid polyphonic browser synthesizer by TXPPS.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#3a3a38",
+  "theme_color": "#3a3a38",
+  "categories": ["music", "entertainment", "utilities"],
+  "icons": [
+    { "src": "/icons/tx8p-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/tx8p-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

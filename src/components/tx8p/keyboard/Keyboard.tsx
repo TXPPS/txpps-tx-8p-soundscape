@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSynthEngine, type VoiceHandle } from "@/engine/SynthEngine";
+import { usePerfStore } from "@/state/perfStore";
 
 const OCTAVE_PATTERN = [
   { note: "C", black: false },
@@ -72,11 +73,16 @@ export function Keyboard({
   const [held, setHeld] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const ownership = useRef<Map<number, { midi: number; handle: VoiceHandle }>>(new Map());
+  const octaveRef = useRef(0);
+  octaveRef.current = usePerfStore((s) => s.octave);
 
   const press = useCallback((pointerId: number, midi: number) => {
     // Guard against duplicate presses from the same pointer.
     if (ownership.current.has(pointerId)) return;
-    const handle = getSynthEngine().pressNote("screen", `p${pointerId}`, midi, 0.9);
+    // Apply the current performance octave; the exact sounding note is
+    // captured in the handle so releases survive octave changes.
+    const sounding = midi + octaveRef.current * 12;
+    const handle = getSynthEngine().pressNote("screen", `p${pointerId}`, sounding, 0.9);
     ownership.current.set(pointerId, { midi, handle });
     setHeld((prev) => {
       if (prev.has(midi)) return prev;

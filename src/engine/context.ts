@@ -1,22 +1,45 @@
 /**
- * Singleton AudioContext + master bus for the TX-8P.
+ * Singleton AudioContext + master bus + effects rack for the TX-8P.
  *
  * Nothing else in the app is allowed to construct an AudioContext.
- * `getAudioGraph()` returns the same singleton on every call, creating
- * it lazily on the first invocation. This module is safe to import from
- * client code only — never call it during SSR / module evaluation.
+ * `getAudioGraph()` returns the same singleton on every call, creating it
+ * lazily on the first invocation. Client-only — never call during SSR.
+ *
+ * Signal flow:
+ *   voiceBus → Drive → EQ → Chorus → Delay → Reverb → Limiter → masterGain
+ *            → analyser + destination
+ *
+ * Global control buses (modWheel, aftertouch, pitchBend) are ConstantSource
+ * nodes the voices tap for modulation; they are started once here.
  */
+
+import {
+  createChorus,
+  createDelay,
+  createDrive,
+  createEq,
+  createLimiter,
+  createReverb,
+  type Effect,
+} from "./dsp/effects";
+import { getWavetableBank, type WavetableBank } from "./dsp/wavetables";
 
 export interface AudioGraph {
   ctx: AudioContext;
   /** All voices connect here. */
   voiceBus: GainNode;
-  /** Post-effects safety limiter feeds this master gain. */
+  /** Post-effects master gain. */
   masterGain: GainNode;
-  /** Final safety limiter. */
-  limiter: DynamicsCompressorNode;
-  /** Analyser for tests and future metering. */
+  /** Analyser for tests + metering. */
   analyser: AnalyserNode;
+  /** Ordered effects, each keyed by its registry section for param routing. */
+  effects: { section: string; fx: Effect }[];
+  /** Global modulation control buses. */
+  modWheel: ConstantSourceNode;
+  aftertouch: ConstantSourceNode;
+  pitchBend: ConstantSourceNode; // cents
+  /** Generated wavetable bank. */
+  bank: WavetableBank;
 }
 
 let graph: AudioGraph | undefined;
@@ -34,29 +57,61 @@ export function getAudioGraph(): AudioGraph {
   const ctx = new Ctor({ latencyHint: "interactive" });
 
   const voiceBus = ctx.createGain();
-  voiceBus.gain.value = 1;
+  voiceBus.gain.value = 0.85;
 
-  // Placeholder pass-through effects chain (populated in CP6). CP3 uses
-  // voiceBus → limiter → masterGain → destination directly.
-  const limiter = ctx.createDynamicsCompressor();
-  limiter.threshold.value = -3;
-  limiter.knee.value = 6;
-  limiter.ratio.value = 12;
-  limiter.attack.value = 0.003;
-  limiter.release.value = 0.12;
+  // ---- effects rack ----
+  const drive = createDrive(ctx);
+  const eq = createEq(ctx);
+  const chorus = createChorus(ctx);
+  const delay = createDelay(ctx);
+  const reverb = createReverb(ctx);
+  const limiter = createLimiter(ctx);
 
   const masterGain = ctx.createGain();
-  masterGain.gain.value = 0.75;
+  masterGain.gain.value = 0.8;
 
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;
 
-  voiceBus.connect(limiter);
-  limiter.connect(masterGain);
+  voiceBus.connect(drive.input);
+  drive.output.connect(eq.input);
+  eq.output.connect(chorus.input);
+  chorus.output.connect(delay.input);
+  delay.output.connect(reverb.input);
+  reverb.output.connect(limiter.input);
+  limiter.output.connect(masterGain);
   masterGain.connect(analyser);
   masterGain.connect(ctx.destination);
 
-  graph = { ctx, voiceBus, masterGain, limiter, analyser };
+  // ---- global control buses ----
+  const modWheel = ctx.createConstantSource();
+  modWheel.offset.value = 0;
+  const aftertouch = ctx.createConstantSource();
+  aftertouch.offset.value = 0;
+  const pitchBend = ctx.createConstantSource();
+  pitchBend.offset.value = 0;
+  modWheel.start();
+  aftertouch.start();
+  pitchBend.start();
+
+  graph = {
+    ctx,
+    voiceBus,
+    masterGain,
+    analyser,
+    effects: [
+      { section: "drive", fx: drive },
+      { section: "eq", fx: eq },
+      { section: "chorus", fx: chorus },
+      { section: "delay", fx: delay },
+      { section: "reverb", fx: reverb },
+      { section: "limiter", fx: limiter },
+    ],
+    modWheel,
+    aftertouch,
+    pitchBend,
+    bank: getWavetableBank(ctx),
+  };
   return graph;
 }
 

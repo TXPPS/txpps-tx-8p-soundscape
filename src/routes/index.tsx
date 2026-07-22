@@ -13,6 +13,8 @@ import { Editor } from "@/components/tx8p/editors/Editor";
 import { TopActions } from "@/components/tx8p/topbar/TopActions";
 import { PresetNav } from "@/components/tx8p/topbar/PresetNav";
 import { SettingsDialog } from "@/components/tx8p/topbar/SettingsDialog";
+import { PresetLibrary } from "@/components/tx8p/library/PresetLibrary";
+import { AppBridges } from "@/components/tx8p/AppBridges";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -127,6 +129,8 @@ function Index() {
       </div>
 
       <SettingsDialog />
+      <PresetLibrary />
+      <AppBridges />
     </Chassis>
   );
 }

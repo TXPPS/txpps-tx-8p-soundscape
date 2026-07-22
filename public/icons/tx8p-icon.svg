@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="TXPPS TX-8P">
+  <defs>
+    <linearGradient id="chassis" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b8b6ab"/>
+      <stop offset="1" stop-color="#7f7e75"/>
+    </linearGradient>
+    <linearGradient id="lcd" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a2a12"/>
+      <stop offset="1" stop-color="#241a0c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#chassis)"/>
+  <rect x="64" y="150" width="384" height="150" rx="14" fill="url(#lcd)" stroke="#000" stroke-opacity="0.35" stroke-width="4"/>
+  <text x="256" y="258" text-anchor="middle" font-family="'IBM Plex Sans','Inter',system-ui,sans-serif" font-size="104" font-weight="700" fill="#f0a544" letter-spacing="4">8P</text>
+  <rect x="64" y="336" width="140" height="26" rx="6" fill="#a83c34"/>
+  <rect x="216" y="336" width="140" height="26" rx="6" fill="#c99a3a"/>
+  <rect x="368" y="336" width="80" height="26" rx="6" fill="#4a6ea8"/>
+  <text x="256" y="120" text-anchor="middle" font-family="'IBM Plex Sans','Inter',system-ui,sans-serif" font-size="42" font-weight="700" fill="#2a2a26" letter-spacing="10">TXPPS</text>
+  <g fill="#efeee6">
+    <rect x="72" y="392" width="28" height="60" rx="3"/>
+    <rect x="108" y="392" width="28" height="60" rx="3"/>
+    <rect x="144" y="392" width="28" height="60" rx="3"/>
+    <rect x="180" y="392" width="28" height="60" rx="3"/>
+    <rect x="216" y="392" width="28" height="60" rx="3"/>
+    <rect x="252" y="392" width="28" height="60" rx="3"/>
+    <rect x="288" y="392" width="28" height="60" rx="3"/>
+    <rect x="324" y="392" width="28" height="60" rx="3"/>
+    <rect x="360" y="392" width="28" height="60" rx="3"/>
+    <rect x="396" y="392" width="28" height="60" rx="3"/>
+  </g>
+</svg>
