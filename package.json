@@ -13,7 +13,6 @@
     "test:audio": "node scripts/audio-smoke.mjs",
     "test:all": "npm run test && npm run test:audio",
     "deploy": "vite build && wrangler deploy -c .output/server/wrangler.json --name txpps-tx-8p",
-    "deploy:temporary": "vite build && node scripts/deploy-temporary.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

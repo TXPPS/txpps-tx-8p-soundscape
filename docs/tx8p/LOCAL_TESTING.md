@@ -15,7 +15,6 @@ everything below works with **no** Lovable or Cloudflare login.
 | `bun run test:audio` | Headless-Chromium **Web Audio** smoke test (real analyser RMS). |
 | `bun run test:all` | Both test suites. |
 | `bun run deploy` | Build + deploy to Cloudflare (needs auth). |
-| `bun run deploy:temporary` | Build + deploy to a temporary Cloudflare claim URL (no login). |
 
 **Windows (no command line):** double-click a launcher in `scripts/`:
 `start-local.ps1`, `build-preview.ps1`, `test-all.ps1`. (Right-click → *Run with

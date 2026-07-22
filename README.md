@@ -35,7 +35,6 @@ connected MIDI controller.
 | `bun run test` | Unit tests (engine lifecycle, voice ownership, registry, presets). |
 | `bun run test:audio` | Audio-focused engine tests (first-note, release, panic, polyphony). |
 | `bun run deploy` | Build + deploy to Cloudflare (needs `wrangler login` / `CLOUDFLARE_API_TOKEN`). |
-| `bun run deploy:temporary` | Build + deploy to a temporary Cloudflare claim URL (no login required). |
 
 Windows users can double-click the launchers in `scripts/`:
 `start-local.ps1`, `build-preview.ps1`, `test-all.ps1`.
