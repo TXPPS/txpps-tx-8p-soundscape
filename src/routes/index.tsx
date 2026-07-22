@@ -7,7 +7,8 @@ import {
   StatusLamp,
 } from "@/components/tx8p/chassis/Chassis";
 import { PresetLCD } from "@/components/tx8p/lcd/PresetLCD";
-import { PerformanceDeck } from "@/components/tx8p/perf/PerformanceDeck";
+import { PerformanceDock } from "@/components/tx8p/perf/PerformanceDock";
+import { OutputMeter } from "@/components/tx8p/audio/OutputMeter";
 import { TabBar } from "@/components/tx8p/tabs/TabBar";
 import { Editor } from "@/components/tx8p/editors/Editor";
 import { TopActions } from "@/components/tx8p/topbar/TopActions";
@@ -15,6 +16,7 @@ import { PresetNav } from "@/components/tx8p/topbar/PresetNav";
 import { SettingsDialog } from "@/components/tx8p/topbar/SettingsDialog";
 import { PresetLibrary } from "@/components/tx8p/library/PresetLibrary";
 import { AppBridges } from "@/components/tx8p/AppBridges";
+import { useViewportClass } from "@/hooks/use-portrait";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,93 +41,130 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const cls = useViewportClass();
   return (
     <Chassis>
-      {/* ===================== IDENTITY BAR ===================== */}
+      {/* ============ REGION 1: HEADER / PATCH / MODE (fixed) ============
+          Header layout keys off usable dimensions (viewport class), not a
+          width-only breakpoint — so a landscape phone (wide but short) gets
+          the compact header, never the tall desktop one. */}
       <header
-        className="identity-panel px-3 py-2.5 md:px-6 md:py-3"
+        className="identity-panel shrink-0 px-3 md:px-6"
         aria-label="Instrument identity"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 8px)",
+          paddingBottom: cls === "mobile-landscape" ? 6 : 10,
+          paddingLeft: "max(env(safe-area-inset-left), 12px)",
+          paddingRight: "max(env(safe-area-inset-right), 12px)",
+        }}
       >
-        {/* Desktop / tablet: single row */}
-        <div className="hidden items-center gap-5 md:flex">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <IdentityMark />
-            <ProductPlate />
-            <span
-              className="font-sans text-[10px] font-medium tracking-[0.28em]"
-              style={{ color: "var(--engraving-chassis-dim)" }}
-            >
-              HYBRID POLY SYNTHESIZER · 8 VOICES
-            </span>
-          </div>
-          <div className="ml-auto flex items-center gap-4">
-            <StatusLamp on />
-            <PresetLCD />
-            <PresetNav />
-            <TopActions />
-          </div>
-        </div>
-
-        {/* Phone portrait: two rows */}
-        <div className="flex flex-col gap-2 md:hidden">
-          <div className="flex items-center gap-3">
-            <div className="flex min-w-0 flex-col leading-tight">
+        {cls === "wide" && (
+          <div className="flex items-center gap-5">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <IdentityMark />
+              <ProductPlate />
               <span
-                className="font-sans text-[9px] font-semibold tracking-[0.3em]"
+                className="font-sans text-[10px] font-medium tracking-[0.28em]"
                 style={{ color: "var(--engraving-chassis-dim)" }}
               >
-                TXPPS
-              </span>
-              <span
-                className="font-sans font-semibold"
-                style={{
-                  color: "var(--engraving-chassis)",
-                  fontSize: 22,
-                  letterSpacing: "0.02em",
-                  lineHeight: 1,
-                }}
-              >
-                TX-8P
+                HYBRID POLY SYNTHESIZER · 8 VOICES
               </span>
             </div>
-            <div className="ml-auto flex items-center gap-1.5">
-              <StatusLamp on />
+            <div className="ml-auto flex items-center gap-4">
+              <div className="flex flex-col items-end gap-1">
+                <OutputMeter width={150} height={22} />
+                <StatusLamp on />
+              </div>
+              <PresetLCD />
+              <PresetNav />
               <TopActions />
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <PresetLCD />
-            <div className="ml-auto">
-              <PresetNav />
+        )}
+
+        {cls === "mobile-portrait" && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-col leading-tight">
+                <span
+                  className="font-sans text-[9px] font-semibold tracking-[0.3em]"
+                  style={{ color: "var(--engraving-chassis-dim)" }}
+                >
+                  TXPPS
+                </span>
+                <span
+                  className="font-sans font-semibold"
+                  style={{
+                    color: "var(--engraving-chassis)",
+                    fontSize: 20,
+                    letterSpacing: "0.02em",
+                    lineHeight: 1,
+                  }}
+                >
+                  TX-8P
+                </span>
+              </div>
+              <div className="ml-1 flex-1">
+                <OutputMeter width={104} height={18} />
+              </div>
+              <TopActions />
+            </div>
+            <div className="flex items-center gap-2">
+              <PresetLCD />
+              <div className="ml-auto">
+                <PresetNav />
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {cls === "mobile-landscape" && (
+          <div className="flex items-center gap-2">
+            <span
+              className="font-sans font-semibold"
+              style={{ color: "var(--engraving-chassis)", fontSize: 16, letterSpacing: "0.02em" }}
+            >
+              TX-8P
+            </span>
+            <PresetLCD />
+            <div className="mx-1">
+              <OutputMeter width={90} height={16} />
+            </div>
+            <div className="ml-auto flex items-center gap-1.5">
+              <PresetNav />
+              <TopActions />
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Chassis seam */}
       <div
         aria-hidden
-        className="h-[2px] w-full"
-        style={{
-          background: "linear-gradient(180deg, oklch(0 0 0 / 0.35), oklch(1 0 0 / 0.15))",
-        }}
+        className="h-[2px] w-full shrink-0"
+        style={{ background: "linear-gradient(180deg, oklch(0 0 0 / 0.35), oklch(1 0 0 / 0.15))" }}
       />
 
-      {/* ===================== PRIMARY TAB ROW ===================== */}
-      <TabBar />
+      {/* ============ REGION 1b: PRIMARY TAB ROW (fixed) ============ */}
+      <div className="shrink-0">
+        <TabBar />
+      </div>
 
-      {/* ===================== FOCUSED EDITOR ===================== */}
-      <div className="flex flex-col gap-2 px-3 py-3 md:px-6 md:py-3">
+      {/* ============ REGION 2: SCROLLABLE SYNTH EDITOR ============ */}
+      <div
+        data-region="editor"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 md:px-6"
+      >
         <Editor />
-        <div className="flex items-center justify-between px-1">
+        <div className="mt-2 flex items-center justify-between px-1">
           <EngravedLabel variant="chassis-dim">TXPPS · TX-8P · Hybrid Poly Synth</EngravedLabel>
           <EngravedLabel variant="chassis-dim">Made in Software · 8P</EngravedLabel>
         </div>
       </div>
 
-      {/* ===================== INTEGRATED PERFORMANCE DECK ===================== */}
-      <div className="mt-auto">
-        <PerformanceDeck />
+      {/* ============ REGION 3: DOCKED PERFORMANCE SURFACE ============ */}
+      <div className="shrink-0">
+        <PerformanceDock />
       </div>
 
       <SettingsDialog />

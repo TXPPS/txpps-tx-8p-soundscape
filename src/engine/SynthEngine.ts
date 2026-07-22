@@ -20,9 +20,38 @@ import { getAudioGraph, hasAudioGraph, type AudioGraph } from "./context";
 import { getDefaults, LFO_DIVS } from "./params/registry";
 import { Voice, type MatrixSlot, type VoiceGlobals } from "./Voice";
 
-export type EngineStatus = "idle" | "starting" | "ready" | "suspended" | "error";
+/**
+ * Authoritative audio-engine lifecycle.
+ *  - locked      no context yet / needs a user gesture to start
+ *  - starting    resume() in flight
+ *  - ready       context exists, state === "running", graph connected, can play
+ *  - suspended   browser suspended it (tab hidden, iOS interruption)
+ *  - recovering  a resume attempt is in flight after a suspension
+ *  - failed      startup/resume errored
+ */
+export type EngineStatus = "locked" | "starting" | "ready" | "suspended" | "recovering" | "failed";
 export type NoteSource = "screen" | "keyboard" | "midi";
 export type VoiceHandle = number;
+
+export interface AudioDiagnostics {
+  status: EngineStatus;
+  contextState: string;
+  running: boolean;
+  destinationConnected: boolean;
+  sampleRate: number;
+  baseLatency: number | null;
+  outputLatency: number | null;
+  contextsCreated: number;
+  startupAttempts: number;
+  activeVoices: number;
+  pendingNotes: number;
+  masterGain: number;
+  lastNoteOn: string | null;
+  lastNoteOff: string | null;
+  lastInterruption: string | null;
+  lastError: string | null;
+  visibility: string;
+}
 
 interface NoteRecord {
   handle: VoiceHandle;
@@ -59,8 +88,18 @@ const UNISON_MAP = [2, 3, 5, 7];
 
 class SynthEngineImpl {
   private graph: AudioGraph | undefined;
-  private status: EngineStatus = "idle";
+  private status: EngineStatus = "locked";
   private startupPromise: Promise<void> | undefined;
+  private graphConnected = false;
+
+  // --- diagnostics ---
+  private contextsCreated = 0;
+  private startupAttempts = 0;
+  private lastNoteOn: string | null = null;
+  private lastNoteOff: string | null = null;
+  private lastInterruption: string | null = null;
+  private lastError: string | null = null;
+  private recoveryInstalled = false;
 
   private nextHandle: VoiceHandle = 1;
   private readonly notes = new Map<VoiceHandle, NoteRecord>();
@@ -102,37 +141,152 @@ class SynthEngineImpl {
   }
 
   // ---------------- lifecycle ----------------
-  private async ensureRunning(): Promise<void> {
-    if (this.status === "ready") return;
+
+  /** True only when the context genuinely exists and is running. */
+  private isRunning(): boolean {
+    return !!this.graph && this.graph.ctx.state === "running";
+  }
+
+  /**
+   * Build the AudioGraph if needed. Synchronous and idempotent — safe to
+   * call inside a user-gesture handler. Does NOT resume (that is async).
+   */
+  private ensureGraph(): AudioGraph {
+    if (!this.graph) {
+      this.graph = getAudioGraph();
+      this.contextsCreated++;
+      this.graphConnected = true;
+      this.installStateListener();
+      this.initLfos();
+      this.applyAllGlobalParams();
+    }
+    return this.graph;
+  }
+
+  private installStateListener() {
+    if (!this.graph) return;
+    const ctx = this.graph.ctx as AudioContext & { onstatechange?: unknown };
+    this.graph.ctx.addEventListener("statechange", () => this.reflectContextState());
+    // iOS Safari raises "interrupted" via statechange too.
+    ctx.onstatechange = () => this.reflectContextState();
+  }
+
+  /**
+   * Play a one-sample silent buffer synchronously. On iOS Safari, calling
+   * resume() alone frequently leaves the hardware output muted until a
+   * source is *started within the user gesture* — this is the unlock.
+   */
+  private silentUnlock() {
+    if (!this.graph) return;
+    try {
+      const ctx = this.graph.ctx;
+      const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+      src.stop(ctx.currentTime + 0.02);
+    } catch {
+      /* non-fatal */
+    }
+  }
+
+  /**
+   * Ensure the context exists and is running. Idempotent: concurrent calls
+   * share one startup promise, never creating a second engine or context.
+   * Must be reachable from a user gesture (that is where it is called from).
+   */
+  private ensureRunning(): Promise<void> {
+    if (this.isRunning()) {
+      this.markReady();
+      return Promise.resolve();
+    }
     if (this.startupPromise) return this.startupPromise;
-    this.setStatus("starting");
-    this.startupPromise = (async () => {
-      try {
-        if (!this.graph) {
-          this.graph = getAudioGraph();
-          this.graph.ctx.addEventListener("statechange", () => this.reflectContextState());
-          this.initLfos();
-          this.applyAllGlobalParams();
-        }
-        if (this.graph.ctx.state !== "running") await this.graph.ctx.resume();
+
+    this.startupAttempts++;
+    this.setStatus(this.graph ? "recovering" : "starting");
+
+    // Synchronous part runs inside the gesture: create + unlock + kick resume.
+    const graph = this.ensureGraph();
+    this.silentUnlock();
+    const resumeP = graph.ctx.state === "running" ? Promise.resolve() : graph.ctx.resume();
+
+    this.startupPromise = resumeP
+      .then(() => {
+        // A second silent unlock after resume settles the iOS output path.
+        this.silentUnlock();
         this.reflectContextState();
-      } catch (e) {
-        console.error("[TX-8P] AudioContext startup failed", e);
-        this.setStatus("error");
-        throw e;
-      } finally {
+      })
+      .catch((e) => {
+        this.lastError = `resume: ${errMsg(e)}`;
+        console.error("[TX-8P] AudioContext resume failed", e);
+        this.setStatus("failed");
+      })
+      .finally(() => {
         this.startupPromise = undefined;
-      }
-    })();
+      });
     return this.startupPromise;
+  }
+
+  /**
+   * Public unlock for the first user gesture anywhere in the app. Safe to
+   * call on every gesture — it no-ops once running.
+   */
+  unlock(): Promise<void> {
+    return this.ensureRunning();
+  }
+
+  private markReady() {
+    if (this.isRunning() && this.graphConnected) this.setStatus("ready");
   }
 
   private reflectContextState() {
     if (!this.graph) return;
-    const s = this.graph.ctx.state;
-    if (s === "running") this.setStatus("ready");
-    else if (s === "suspended") this.setStatus("suspended");
-    else if (s === "closed") this.setStatus("error");
+    const s = this.graph.ctx.state as string;
+    if (s === "running") {
+      this.markReady();
+    } else if (s === "closed") {
+      this.setStatus("failed");
+    } else if (s === "interrupted") {
+      // iOS interruption (call, Siri, route change) — needs a gesture to recover.
+      this.lastInterruption = new Date().toISOString();
+      this.setStatus("suspended");
+    } else {
+      // "suspended"
+      this.setStatus(this.startupPromise ? "recovering" : "suspended");
+    }
+  }
+
+  /**
+   * Attempt recovery without a fresh note (visibility restore / pageshow).
+   * On iOS a resume() outside a gesture may be rejected; that is fine — the
+   * next user gesture will unlock. We surface RECONNECT so the UI prompts.
+   */
+  attemptRecovery() {
+    if (!this.graph || this.isRunning()) {
+      this.markReady();
+      return;
+    }
+    void this.ensureRunning();
+  }
+
+  /** Install document-level gesture + visibility recovery (client-only, once). */
+  installRecovery() {
+    if (this.recoveryInstalled || typeof window === "undefined") return;
+    this.recoveryInstalled = true;
+    const gesture = () => {
+      if (!this.isRunning()) void this.ensureRunning();
+    };
+    // capture so we run before per-key handlers; passive so we never block input
+    window.addEventListener("pointerdown", gesture, { capture: true, passive: true });
+    window.addEventListener("touchend", gesture, { capture: true, passive: true });
+    window.addEventListener("keydown", gesture, { capture: true });
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) this.attemptRecovery();
+      else if (this.graph && !this.isRunning()) this.reflectContextState();
+    });
+    window.addEventListener("pageshow", () => this.attemptRecovery());
+    window.addEventListener("focus", () => this.attemptRecovery());
   }
 
   getContext(): AudioContext | undefined {
@@ -140,6 +294,32 @@ class SynthEngineImpl {
   }
   getAnalyser(): AnalyserNode | undefined {
     return this.graph?.analyser;
+  }
+  getMeterAnalysers(): { L: AnalyserNode; R: AnalyserNode } | undefined {
+    return this.graph ? { L: this.graph.meterL, R: this.graph.meterR } : undefined;
+  }
+
+  getDiagnostics(): AudioDiagnostics {
+    const ctx = this.graph?.ctx;
+    return {
+      status: this.status,
+      contextState: ctx?.state ?? "none",
+      running: this.isRunning(),
+      destinationConnected: this.graphConnected,
+      sampleRate: ctx?.sampleRate ?? 0,
+      baseLatency: ctx?.baseLatency ?? null,
+      outputLatency: (ctx as AudioContext & { outputLatency?: number })?.outputLatency ?? null,
+      contextsCreated: this.contextsCreated,
+      startupAttempts: this.startupAttempts,
+      activeVoices: this.getActiveVoiceCount(),
+      pendingNotes: this.pending.size,
+      masterGain: this.graph?.masterGain.gain.value ?? 0,
+      lastNoteOn: this.lastNoteOn,
+      lastNoteOff: this.lastNoteOff,
+      lastInterruption: this.lastInterruption,
+      lastError: this.lastError,
+      visibility: typeof document !== "undefined" ? document.visibilityState : "unknown",
+    };
   }
 
   // ---------------- LFOs ----------------
@@ -297,17 +477,25 @@ class SynthEngineImpl {
   // ---------------- note lifecycle ----------------
   pressNote(source: NoteSource, sourceKey: string, midi: number, velocity = 0.8): VoiceHandle {
     const handle = this.nextHandle++;
-    if (this.status === "ready" && this.graph) {
+    this.lastNoteOn = `${midi} (${source}) @ ${new Date().toISOString()}`;
+
+    // Trust the ACTUAL context state, never a cached "ready". This is what
+    // fixes the "READY but silent" case after an iOS interruption.
+    if (this.isRunning()) {
+      this.markReady();
       this.triggerNote({ handle, midi, velocity, source, sourceKey, voices: [], pedalHeld: false });
       return handle;
     }
+
+    // Not running yet — preserve the note and dispatch it the instant the
+    // context is unlocked, unless it was released in the meantime.
     this.pending.set(handle, { handle, midi, velocity, source, sourceKey, cancelled: false });
     void this.ensureRunning()
       .then(() => {
         const req = this.pending.get(handle);
         if (!req) return;
         this.pending.delete(handle);
-        if (req.cancelled || this.status !== "ready" || !this.graph) return;
+        if (req.cancelled || !this.isRunning()) return;
         this.triggerNote({
           handle: req.handle,
           midi: req.midi,
@@ -323,6 +511,7 @@ class SynthEngineImpl {
   }
 
   releaseNote(handle: VoiceHandle) {
+    this.lastNoteOff = `handle ${handle} @ ${new Date().toISOString()}`;
     const req = this.pending.get(handle);
     if (req) {
       req.cancelled = true;
@@ -538,6 +727,10 @@ class SynthEngineImpl {
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
+function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 function divToHz(tempo: number, divIdx: number): number {
   const beat = 60 / tempo;
   const label = LFO_DIVS[divIdx] ?? "1/4";
@@ -565,6 +758,11 @@ export function getSynthEngine(): SynthEngineImpl {
         engine: instance,
         getGraph: () => (hasAudioGraph() ? getAudioGraph() : undefined),
       };
+      // Install document-level gesture + visibility recovery so the very
+      // first touch anywhere unlocks audio, and returning from an
+      // interruption re-arms it — never requiring a refresh, preset change,
+      // or Panic.
+      instance.installRecovery();
     }
   }
   return instance;

@@ -2,7 +2,7 @@ import { Settings, AlertOctagon } from "lucide-react";
 import { useUiStore } from "@/state/uiStore";
 import { usePerfStore } from "@/state/perfStore";
 import { getSynthEngine } from "@/engine/SynthEngine";
-import { useEngineStatus } from "@/engine/useEngine";
+import { AudioStatus } from "@/components/tx8p/audio/AudioStatus";
 
 interface HardwareIconButtonProps {
   onClick: () => void;
@@ -48,64 +48,6 @@ function HardwareIconButton({
   );
 }
 
-/** Compact status pill reflecting real AudioContext state. */
-function EngineStatusPill() {
-  const status = useEngineStatus();
-  const label =
-    status === "idle"
-      ? "START AUDIO"
-      : status === "starting"
-        ? "STARTING"
-        : status === "ready"
-          ? "READY"
-          : status === "suspended"
-            ? "SUSPENDED"
-            : "ERROR — RETRY";
-  const dotColor =
-    status === "ready"
-      ? "var(--lcd-amber)"
-      : status === "error"
-        ? "var(--btn-red)"
-        : status === "starting"
-          ? "var(--btn-amber)"
-          : "oklch(0.55 0 0)";
-  const clickable = status !== "ready" && status !== "starting";
-  return (
-    <button
-      type="button"
-      disabled={!clickable}
-      onClick={() => {
-        // Prod an idempotent press+release to force resume.
-        const eng = getSynthEngine();
-        const h = eng.pressNote("screen", "status-tap", 60, 0);
-        eng.releaseNote(h);
-      }}
-      aria-label={`Audio engine ${label}`}
-      title={`Audio engine ${label}`}
-      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-[2px] px-2 font-sans font-semibold"
-      style={{
-        height: 22,
-        fontSize: 9,
-        letterSpacing: "0.16em",
-        color: "var(--engraving-chassis)",
-        background: "linear-gradient(180deg, oklch(0.30 0.004 60) 0%, oklch(0.22 0.004 60) 100%)",
-        boxShadow: "inset 0 0 0 1px oklch(0 0 0 / 0.55), inset 0 1px 2px oklch(0 0 0 / 0.45)",
-        cursor: clickable ? "pointer" : "default",
-      }}
-    >
-      <span
-        aria-hidden
-        className="h-1.5 w-1.5 rounded-full"
-        style={{
-          background: dotColor,
-          boxShadow: `0 0 4px ${dotColor}`,
-        }}
-      />
-      {label}
-    </button>
-  );
-}
-
 export function TopActions() {
   const openSettings = useUiStore((s) => s.setSettingsOpen);
   const flash = useUiStore((s) => s.flashLcd);
@@ -113,7 +55,7 @@ export function TopActions() {
 
   return (
     <div className="flex items-center gap-1.5">
-      <EngineStatusPill />
+      <AudioStatus />
       <HardwareIconButton onClick={() => openSettings(true)} ariaLabel="Settings" title="Settings">
         <Settings size={14} strokeWidth={2.25} />
       </HardwareIconButton>

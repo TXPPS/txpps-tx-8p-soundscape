@@ -16,8 +16,9 @@ import { tryParam } from "@/engine/params/registry";
 import { ParamControl } from "@/components/tx8p/editors/ParamControl";
 import { ProgramButton } from "@/components/tx8p/program/ProgramButton";
 import { EngravedLabel } from "@/components/tx8p/chassis/Chassis";
-import { TX8P_PRODUCT, TX8P_REPO, TX8P_TAGLINE, TX8P_VERSION } from "@/lib/version";
+import { TX8P_BUILD, TX8P_PRODUCT, TX8P_REPO, TX8P_TAGLINE, TX8P_VERSION } from "@/lib/version";
 import { applyUpdate, getCacheInfo, getPwaState, promptInstall, subscribePwa } from "@/lib/pwa";
+import { audioStatusView } from "@/components/tx8p/audio/AudioStatus";
 
 type Section = "AUDIO" | "MIDI" | "PERFORMANCE" | "DISPLAY" | "PWA" | "ABOUT";
 const SECTIONS: Section[] = ["AUDIO", "MIDI", "PERFORMANCE", "DISPLAY", "PWA", "ABOUT"];
@@ -99,44 +100,82 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function useDiagnostics() {
+function usePoll(ms = 300) {
   const [, setTick] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 300);
+    const t = setInterval(() => setTick((n) => n + 1), ms);
     return () => clearInterval(t);
-  }, []);
+  }, [ms]);
+}
+
+function pwaMode(): string {
+  if (typeof window === "undefined") return "unknown";
+  if (window.matchMedia?.("(display-mode: standalone)").matches) return "standalone (PWA)";
+  if ((navigator as Navigator & { standalone?: boolean }).standalone) return "standalone (iOS)";
+  return "browser";
+}
+
+function buildAudioDiagnostics() {
   const eng = getSynthEngine();
+  const d = eng.getDiagnostics();
   return {
-    active: eng.getActiveVoiceCount(),
-    pending: eng.getPendingCount(),
-    sampleRate: eng.getSampleRate(),
+    product: TX8P_PRODUCT,
+    version: TX8P_VERSION,
+    build: TX8P_BUILD,
+    userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+    platform: typeof navigator !== "undefined" ? navigator.platform : "",
+    mode: pwaMode(),
+    swCacheVersion: getSwVersion(),
+    ...d,
   };
+}
+function getSwVersion(): string {
+  // The SW cache is versioned "tx8p-v<n>"; surfaced for cache-mismatch triage.
+  return typeof caches !== "undefined" ? "see PWA panel" : "n/a";
 }
 
 function AudioPanel() {
   const status = useEngineStatus();
-  const diag = useDiagnostics();
+  usePoll(300);
+  const view = audioStatusView(status);
+  const d = getSynthEngine().getDiagnostics();
+  const [copied, setCopied] = useState(false);
+
   return (
     <div className="rounded-[3px] p-3" style={panel}>
-      <Row label="Context state">{status.toUpperCase()}</Row>
-      <Row label="Sample rate">
-        {diag.sampleRate ? `${(diag.sampleRate / 1000).toFixed(1)} kHz` : "—"}
+      <Row label="Status">
+        <span style={{ color: view.color }}>{view.label}</span>
       </Row>
-      <Row label="Active voices">{diag.active}</Row>
-      <Row label="Pending notes">{diag.pending}</Row>
-      <div className="mt-3 flex gap-2">
-        <ProgramButton
-          color="cream"
-          onClick={() => {
-            const eng = getSynthEngine();
-            const h = eng.pressNote("screen", "resume-tap", 60, 0);
-            eng.releaseNote(h);
-          }}
-        >
+      <Row label="Context state">{d.contextState}</Row>
+      <Row label="Destination">{d.destinationConnected ? "connected" : "—"}</Row>
+      <Row label="Sample rate">
+        {d.sampleRate ? `${(d.sampleRate / 1000).toFixed(1)} kHz` : "—"}
+      </Row>
+      <Row label="Output latency">
+        {d.outputLatency != null ? `${(d.outputLatency * 1000).toFixed(1)} ms` : "—"}
+      </Row>
+      <Row label="Contexts created">{d.contextsCreated}</Row>
+      <Row label="Startup attempts">{d.startupAttempts}</Row>
+      <Row label="Active voices">{d.activeVoices}</Row>
+      <Row label="Pending notes">{d.pendingNotes}</Row>
+      <Row label="Master gain">{d.masterGain.toFixed(2)}</Row>
+      <Row label="Build">{TX8P_BUILD}</Row>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <ProgramButton color="cream" onClick={() => void getSynthEngine().unlock()}>
           Resume / Retry
         </ProgramButton>
         <ProgramButton color="red" onClick={() => getSynthEngine().panic()}>
           Panic
+        </ProgramButton>
+        <ProgramButton
+          color="cream"
+          onClick={() => {
+            navigator.clipboard?.writeText(JSON.stringify(buildAudioDiagnostics(), null, 2));
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+        >
+          {copied ? "Copied ✓" : "Copy Audio Diagnostics"}
         </ProgramButton>
       </div>
     </div>
