@@ -284,3 +284,24 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Audio-status indicator pulse (STARTING / RECONNECT). */
+@keyframes tx8p-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Output-meter peak-hold tick fade. */
+@keyframes tx8p-peak-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.4;
+  }
+}

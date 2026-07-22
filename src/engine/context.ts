@@ -30,8 +30,11 @@ export interface AudioGraph {
   voiceBus: GainNode;
   /** Post-effects master gain. */
   masterGain: GainNode;
-  /** Analyser for tests + metering. */
+  /** Mono analyser for tests + smoke RMS. */
   analyser: AnalyserNode;
+  /** Post-master stereo meter taps (left / right). */
+  meterL: AnalyserNode;
+  meterR: AnalyserNode;
   /** Ordered effects, each keyed by its registry section for param routing. */
   effects: { section: string; fx: Effect }[];
   /** Global modulation control buses. */
@@ -73,6 +76,17 @@ export function getAudioGraph(): AudioGraph {
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;
 
+  // Post-master stereo meter taps: a passive splitter feeds two small
+  // analysers. This only observes the output — it never routes audio back
+  // into the destination, so it adds no latency and cannot alter the mix.
+  const meterSplit = ctx.createChannelSplitter(2);
+  const meterL = ctx.createAnalyser();
+  const meterR = ctx.createAnalyser();
+  meterL.fftSize = 256;
+  meterR.fftSize = 256;
+  meterL.smoothingTimeConstant = 0;
+  meterR.smoothingTimeConstant = 0;
+
   voiceBus.connect(drive.input);
   drive.output.connect(eq.input);
   eq.output.connect(chorus.input);
@@ -81,6 +95,9 @@ export function getAudioGraph(): AudioGraph {
   reverb.output.connect(limiter.input);
   limiter.output.connect(masterGain);
   masterGain.connect(analyser);
+  masterGain.connect(meterSplit);
+  meterSplit.connect(meterL, 0);
+  meterSplit.connect(meterR, 1);
   masterGain.connect(ctx.destination);
 
   // ---- global control buses ----
@@ -99,6 +116,8 @@ export function getAudioGraph(): AudioGraph {
     voiceBus,
     masterGain,
     analyser,
+    meterL,
+    meterR,
     effects: [
       { section: "drive", fx: drive },
       { section: "eq", fx: eq },

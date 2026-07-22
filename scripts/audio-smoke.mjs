@@ -306,6 +306,36 @@ async function main() {
   assert("param changes + mono mode still sound", reg.rms > 0.004, `rms=${reg.rms.toFixed(4)}`);
   assert("sample rate reported", reg.sr > 0, `sr=${reg.sr}`);
 
+  // 6) audio lifecycle (Phase 1-3 guarantees)
+  const life = await evaluate(`(async()=>{
+    const e=window.__t.eng;
+    const before=e.getDiagnostics();
+    // repeated unlock() + a press must never create a 2nd context/engine
+    await e.unlock(); await e.unlock(); await e.unlock();
+    e.panic();
+    const h=e.pressNote('screen','life',60,0.9);
+    await new Promise(r=>setTimeout(r,120));
+    e.releaseNote(h);
+    const after=e.getDiagnostics();
+    return {
+      contexts: after.contextsCreated,
+      running: after.running,
+      status: e.getStatus(),
+      destConnected: after.destinationConnected,
+      hasLastNoteOn: !!after.lastNoteOn,
+      sameEngine: window.__tx8p.engine === e,
+    };
+  })()`);
+  assert(
+    "exactly one AudioContext after repeated unlock+panic",
+    life.contexts === 1,
+    `contexts=${life.contexts}`,
+  );
+  assert("engine singleton stable", life.sameEngine === true);
+  assert("status READY only while running", !(life.status === "ready" && !life.running));
+  assert("destination reported connected", life.destConnected === true);
+  assert("diagnostics record last note-on", life.hasLastNoteOn === true);
+
   const passed = results.filter((r) => r.ok).length;
   const total = results.length;
   log(`\n${passed}/${total} assertions passed`);

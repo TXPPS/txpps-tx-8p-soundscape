@@ -10,7 +10,7 @@ export function useEngineStatus(): EngineStatus {
   return useSyncExternalStore(
     (cb) => getSynthEngine().subscribe(cb),
     () => getSynthEngine().getStatus(),
-    () => "idle" as EngineStatus,
+    () => "locked" as EngineStatus,
   );
 }
 

@@ -11,7 +11,8 @@
     "preview:built": "node scripts/preview.mjs --no-build",
     "test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
     "test:audio": "node scripts/audio-smoke.mjs",
-    "test:all": "npm run test && npm run test:audio",
+    "test:ui": "node scripts/responsive-smoke.mjs",
+    "test:all": "npm run test && npm run test:audio && npm run test:ui",
     "deploy": "vite build && wrangler deploy -c .output/server/wrangler.json --name txpps-tx-8p",
     "lint": "eslint .",
     "format": "prettier --write ."

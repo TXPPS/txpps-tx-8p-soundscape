@@ -1,9 +1,15 @@
 import { type ReactNode } from "react";
 
 export function Chassis({ children }: { children: ReactNode }) {
+  // Fixed to the dynamic viewport height so the three regions — header,
+  // scrollable editor, docked performance surface — dock reliably on mobile
+  // (100dvh tracks the iOS URL bar) without the whole page scrolling while
+  // playing. The editor region owns its own scroll.
   return (
-    <div className="chassis-surface min-h-screen w-full">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1500px] flex-col">{children}</div>
+    <div className="chassis-surface h-[100dvh] w-full overflow-hidden">
+      <div className="mx-auto flex h-full w-full max-w-[1500px] flex-col overflow-hidden">
+        {children}
+      </div>
     </div>
   );
 }
